@@ -1,0 +1,10 @@
+{
+  "src/spinoct/analytic/uniaxial.py::0.1": {
+    "reason": "Dimensionless. The tolerance eps in the published definition of the 'optimal switching time' knee, T_eps = 2 ln(4/eps) (alpha + 1/alpha) tau0, at which Phi_m = (1 + eps) Phi_infinity. 0.1 is the value used in Phys. Rev. Lett. 126, 177206 (2021) Fig. 3. It is a fraction of a cost ratio, so it carries no unit in any code path, and it is a named module constant that every caller can override.",
+    "source": "DEFAULT_KNEE_TOLERANCE = 0.1"
+  },
+  "src/spinoct/analytic/uniaxial.py::1e-12": {
+    "reason": "Dimensionless relative tolerance. It is compared against abs(t[0])/T, a ratio of two times, to decide whether a query grid begins at the initial time. It carries no unit of its own and only selects between the direct-on-grid integration path and the internal-grid fallback; the physics is identical either way.",
+    "source": "_ORIGIN_RELATIVE_TOLERANCE = 1e-12"
+  }
+}
