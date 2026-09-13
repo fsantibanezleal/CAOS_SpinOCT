@@ -4,6 +4,25 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.02.000] - 2026-09-13
+
+### Added
+- `numeric.ImageOCPSolver`: the numerical image-based optimal control path solver (Badarneh,
+  Kwiatkowski, Bessarab, Phys. Rev. B 107, 214448 (2023)). Represents the trajectory as a chain of
+  unit vectors on the sphere, minimizes the midpoint-rule switching cost by projected gradient descent
+  with geodesic retraction and a backtracking line search, and converges on a dimensionless
+  relative-cost criterion. The gradient is local, so each iteration is O(Q) rather than O(Q^2).
+- `ImageOCPSolver.solve_best`: a multi-seed sweep that keeps the lowest-cost path, the guard against
+  reporting a symmetric local minimum when several optimal control paths coexist (the biaxial case).
+- Symmetry-breaking of the initial chain is on by default, because the pole-to-pole geodesic is a
+  saddle where the gradient vanishes and a solve started on it reports the meridian as converged.
+
+### Validated
+- The numerical cost reproduces the exact analytic uniaxial cost from above, with the gap falling as
+  the image count rises (the acceptance gate). The numerical path precesses, matching the analytic
+  peak-to-peak azimuth. A hard axis pushes the numerical cost below the free-macrospin floor, the
+  central biaxial claim, which has no closed form.
+
 ## [0.01.000] - 2026-09-12
 
 ### Added
