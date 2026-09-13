@@ -83,6 +83,14 @@
     "reason": "Dimensionless relative tolerance. Convergence when the relative decrease in cost between accepted steps falls below it, a ratio of two costs. Chosen relative precisely so it is unit-independent, unlike a gradient-magnitude tolerance.",
     "source": "relative_tolerance: float = 1e-12,"
   },
+  "src/spinoct/pareto.py::1e-18": {
+    "reason": "Dimensionless numerical tolerance in the Pareto-dominance comparison, guarding floating-point ties when deciding 'at least as good' and 'strictly better'. Not a physical quantity.",
+    "source": "at_least_as_good = np.all(others <= vectors[i] + 1e-18, axis=1)"
+  },
+  "src/spinoct/pareto.py::200.0": {
+    "reason": "Dimensionless. The upper end of the default switching-time sweep, in units of tau0 (geomspace 0.5 to 200 tau0). A multiple of the Larmor timescale, not a physical field or energy.",
+    "source": "switching_times_tau0 = np.geomspace(0.5, 200.0, 24)"
+  },
   "src/spinoct/thermal/stabilize.py::1.5": {
     "reason": "Dimensionless. A value in the default B_r/K-mu sweep tuple (0, 0.5, 1, 1.5, 2). Each is a ratio of the longitudinal field to the anisotropy field, so unitless; the actual field is ratio times system.anisotropy_field, which carries the tesla.",
     "source": "br_over_anisotropy: tuple[float, ...] = (0.0, 0.5, 1.0, 1.5, 2.0),"
