@@ -78,5 +78,13 @@
   "src/spinoct/numeric/image_ocp.py::1e-12": {
     "reason": "Dimensionless relative tolerance. Convergence when the relative decrease in cost between accepted steps falls below it, a ratio of two costs. Chosen relative precisely so it is unit-independent, unlike a gradient-magnitude tolerance.",
     "source": "relative_tolerance: float = 1e-12,"
+  },
+  "src/spinoct/thermal/stabilize.py::1.5": {
+    "reason": "Dimensionless. A value in the default B_r/K-mu sweep tuple (0, 0.5, 1, 1.5, 2). Each is a ratio of the longitudinal field to the anisotropy field, so unitless; the actual field is ratio times system.anisotropy_field, which carries the tesla.",
+    "source": "br_over_anisotropy: tuple[float, ...] = (0.0, 0.5, 1.0, 1.5, 2.0),"
+  },
+  "src/spinoct/thermal/stochastic.py::1.96": {
+    "reason": "Dimensionless. The standard normal z-score for a two-sided 95 percent confidence interval on the binomial success rate. A statistical constant, not a physical quantity.",
+    "source": "half_width = 1.96 * float(np.sqrt(variance / n_copies))"
   }
 }
