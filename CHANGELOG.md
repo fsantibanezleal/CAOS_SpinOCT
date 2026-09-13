@@ -4,6 +4,16 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.04.000] - 2026-09-13
+
+### Added
+- spinoct.thermal: stochastic Landau-Lifshitz-Gilbert dynamics with the fluctuation-dissipation
+  thermal field (validated against the Boltzmann distribution), the switching success rate over an
+  ensemble (R11), and the longitudinal-field cost-reliability front plus the instability-penalized
+  optimal control path (R12). The front reproduces the published half-hyperbolic bare path, the
+  success dip near B_r = 0.5 K/mu, and unity at large field, and adds the cost of that reliability,
+  a number not previously computed. docs/theory/07 authored.
+
 ## [0.03.000] - 2026-09-13
 
 ### Added
