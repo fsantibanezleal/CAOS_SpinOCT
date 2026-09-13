@@ -14,9 +14,13 @@ from .baselines import (
     static_switching_field,
     sun_wang_minimal_field,
 )
+from .constrained import ConstrainedResult, CRABSolver, GRAPESolver
 
 __all__ = [
+    "CRABSolver",
     "ConstantFieldProtocol",
+    "ConstrainedResult",
+    "GRAPESolver",
     "PrecessionalProtocol",
     "ProtocolResult",
     "static_switching_field",
