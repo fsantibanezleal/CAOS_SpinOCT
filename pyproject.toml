@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spinoct"
-version = "0.7.0"
+version = "0.8.0"
 description = "Optimal control paths and energy-efficient switching pulses for classical spin dynamics (Landau-Lifshitz-Gilbert)"
 readme = "README.md"
 license = { text = "MIT" }
