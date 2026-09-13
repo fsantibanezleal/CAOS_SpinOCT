@@ -4,6 +4,16 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.08.000] - 2026-09-13
+
+### Added
+- spinoct.adjoint: exact gradient-based pulse optimization by the discrete adjoint method (R10). A
+  hand-derived reverse-mode gradient through a norm-projected LLG integration, validated against
+  finite differences to 1e-8, fed to L-BFGS-B which converges onto the analytic optimum (within a few
+  percent of the closed-form cost). Pure numpy, no autodiff dependency; the reverse pass batches to a
+  GPU tensor library unchanged. Non-dimensionalized so the optimizer works in order-unity variables.
+  docs/theory/10.
+
 ## [0.07.000] - 2026-09-13
 
 ### Added

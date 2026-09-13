@@ -1,4 +1,24 @@
 {
+  "src/spinoct/adjoint.py::0.3": {
+    "reason": "Dimensionless initial-guess scale for the transverse field in units of the anisotropy field (the problem is non-dimensionalized). Not a physical quantity.",
+    "source": "initial = rng.normal(scale=0.3, size=(n_slices, 2)).reshape(-1)"
+  },
+  "src/spinoct/adjoint.py::1e-09": {
+    "reason": "Dimensionless L-BFGS-B gtol on the (non-dimensionalized) projected gradient. An optimizer setting.",
+    "source": "options={..., 'ftol': 1e-12, 'gtol': 1e-9}"
+  },
+  "src/spinoct/adjoint.py::1e-12": {
+    "reason": "Dimensionless L-BFGS-B ftol on the (non-dimensionalized, order-1) objective. An optimizer setting.",
+    "source": "options={..., 'ftol': 1e-12, 'gtol': 1e-9}"
+  },
+  "src/spinoct/adjoint.py::1e-300": {
+    "reason": "Dimensionless floor guarding a division by the objective scale when the free-macrospin cost underflows. A numerical guard, not a physical quantity.",
+    "source": "objective_scale = max(free, 1e-300)"
+  },
+  "src/spinoct/adjoint.py::50.0": {
+    "reason": "Dimensionless reversal-penalty weight, scaled by the free-macrospin cost so the penalty matches the cost scale. A unitless weight.",
+    "source": "fidelity_weight = 50.0 * free"
+  },
   "src/spinoct/analytic/sot.py::1e-09": {
     "reason": "Dimensionless relative tolerance in math.isclose, comparing tan(beta) against alpha (both dimensionless) to detect the forbidden SOT ratio. Not a physical quantity.",
     "source": "return math.isclose(math.tan(self.beta), self.system.alpha, rel_tol=1e-9, abs_tol=1e-12)"
