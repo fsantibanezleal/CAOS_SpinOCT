@@ -30,7 +30,13 @@ import numpy as np
 
 from .system import MacrospinSystem
 
-__all__ = ["field_from_trajectory", "integrate_llg", "llg_rhs", "switching_cost"]
+__all__ = [
+    "field_from_trajectory",
+    "integrate_llg",
+    "integrate_llg_tabulated",
+    "llg_rhs",
+    "switching_cost",
+]
 
 
 def llg_rhs(s: np.ndarray, b_applied: np.ndarray, system: MacrospinSystem) -> np.ndarray:
@@ -139,6 +145,55 @@ def integrate_llg(
         k2 = llg_rhs(s + 0.5 * step * k1, field(t0 + 0.5 * step), system)
         k3 = llg_rhs(s + 0.5 * step * k2, field(t0 + 0.5 * step), system)
         k4 = llg_rhs(s + step * k3, field(t0 + step), system)
+        s = s + (step / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
+        s = s / np.linalg.norm(s)
+        out[index + 1] = s
+
+    return out
+
+
+def integrate_llg_tabulated(
+    s0: np.ndarray,
+    field_table: np.ndarray,
+    times: np.ndarray,
+    system: MacrospinSystem,
+) -> np.ndarray:
+    """Integrate the equation of motion under a field tabulated on the integration grid.
+
+    A fast path for the constrained solvers, which build the field on exactly the grid they integrate
+    on. It avoids the per-substep interpolation of :func:`integrate_llg` by taking the field at a step
+    from the table and the midpoint field as the average of the two bracketing samples, which is
+    second-order accurate and matches the RK4 order for a smooth pulse. Same norm-preserving RK4,
+    orders of magnitude faster inside an optimization loop.
+
+    Args:
+        s0: the initial unit moment direction, shape ``(3,)``.
+        field_table: the field at each grid time, shape ``(N, 3)``, T.
+        times: the grid, s, shape ``(N,)``, strictly increasing.
+        system: the macrospin.
+
+    Returns:
+        The trajectory, shape ``(N, 3)``, with ``out[0] == s0 / |s0|``.
+    """
+    times = np.asarray(times, dtype=float)
+    field_table = np.asarray(field_table, dtype=float)
+    if field_table.shape != (times.size, 3):
+        raise ValueError("field_table must have shape (len(times), 3)")
+
+    out = np.empty((times.size, 3), dtype=float)
+    s = np.asarray(s0, dtype=float)
+    s = s / np.linalg.norm(s)
+    out[0] = s
+
+    for index in range(times.size - 1):
+        step = times[index + 1] - times[index]
+        b0 = field_table[index]
+        b1 = field_table[index + 1]
+        b_mid = 0.5 * (b0 + b1)
+        k1 = llg_rhs(s, b0, system)
+        k2 = llg_rhs(s + 0.5 * step * k1, b_mid, system)
+        k3 = llg_rhs(s + 0.5 * step * k2, b_mid, system)
+        k4 = llg_rhs(s + step * k3, b1, system)
         s = s + (step / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
         s = s / np.linalg.norm(s)
         out[index + 1] = s

@@ -19,6 +19,30 @@
     "reason": "Dimensionless fraction of pi. The default constant-field polar angle is 3 pi / 4 (0.75 * pi), a geometric choice placing the field in the reversing hemisphere off the easy axis. An angle in radians, not a physical observable.",
     "source": "polar_angle: float = 0.75 * np.pi"
   },
+  "src/spinoct/control/constrained.py::0.1": {
+    "reason": "Dimensionless. The CRAB base frequencies are nudged by +-10 percent (the chopped random basis). A relative perturbation of a frequency, carries no unit of its own.",
+    "source": "frequencies = base * (1.0 + 0.1 * rng.uniform(-1.0, 1.0, size=self.n_harmonics))"
+  },
+  "src/spinoct/control/constrained.py::0.3": {
+    "reason": "Dimensionless. The initial random slice amplitudes are drawn at 0.3 of the amplitude cap, a starting scale for the optimizer. Multiplies a field cap, not a physical observable; the optimizer moves off it immediately.",
+    "source": "scale = 0.3 * self.amplitude_cap"
+  },
+  "src/spinoct/control/constrained.py::1e-09": {
+    "reason": "Dimensionless optimizer tolerance (Nelder-Mead xatol), the convergence tolerance on the parameter vector. An algorithm setting, not a physical quantity.",
+    "source": "options={\"maxiter\": ..., \"xatol\": 1e-9, \"fatol\": 1e-30}"
+  },
+  "src/spinoct/control/constrained.py::1e-30": {
+    "reason": "Dimensionless optimizer tolerance (Nelder-Mead fatol) on the objective, set very small so the iteration cap governs termination. An algorithm setting, not a physical quantity.",
+    "source": "options={\"maxiter\": ..., \"xatol\": 1e-9, \"fatol\": 1e-30}"
+  },
+  "src/spinoct/control/constrained.py::20.0": {
+    "reason": "Dimensionless multiplier. The default amplitude cap is 20x the anisotropy field, a generous default that is effectively unconstrained; real runs pass an explicit cap. Multiplies K/mu (a field), so the product carries the unit, not this factor.",
+    "source": "self.amplitude_cap = amplitude_cap if amplitude_cap is not None else 20.0 * system.anisotropy_field"
+  },
+  "src/spinoct/control/constrained.py::50.0": {
+    "reason": "Dimensionless penalty weight. The reversal-infidelity penalty is 50x the free-macrospin cost, chosen so the penalty and the cost are the same order of magnitude for any material and switching time. Multiplies a cost scale; the weight itself is unitless.",
+    "source": "self.fidelity_weight = fidelity_weight if fidelity_weight is not None else 50.0 * free"
+  },
   "src/spinoct/metrics/__init__.py::0.99": {
     "reason": "Dimensionless energy fraction. The default 99 percent threshold defining a pulse's spectral bandwidth. A fraction of total spectral energy, carries no physical unit.",
     "source": "fraction: float = 0.99"

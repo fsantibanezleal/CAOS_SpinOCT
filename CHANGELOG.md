@@ -4,6 +4,18 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.03.000] - 2026-09-13
+
+### Added
+- control.baselines: static antiparallel field, Sun-Wang minimal constant field, precessional pulse
+  (R00-R04). analytic.sot: the closed-form optimal SOT protocol (R06). metrics.ProtocolMetrics: the
+  dimensionless scoring suite (cost over floor and over the free cost, peak amplitude, spectral
+  bandwidth).
+- control.constrained: GRAPE (piecewise-constant field under an amplitude cap and slew penalty) and
+  CRAB (band-limited randomized Fourier basis) (R08, R09). These optimize the control directly, which
+  is what lets a realizability constraint be imposed, and answer the price-of-realizability question.
+  A fast norm-preserving tabulated RK4 integrator backs the optimization loop.
+
 ## [0.02.000] - 2026-09-13
 
 ### Added
