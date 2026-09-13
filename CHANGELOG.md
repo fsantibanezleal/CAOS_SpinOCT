@@ -4,6 +4,14 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.06.000] - 2026-09-13
+
+### Added
+- spinoct.pareto: the multi-objective Pareto front (R14) over switching time, cost, peak field and
+  spectral bandwidth, with dominance marking. The analytic optimal family trades switching time
+  against the other three objectives, so it forms one continuous front; faster switching costs more
+  peak field and bandwidth.
+
 ## [0.05.000] - 2026-09-13
 
 ### Added
