@@ -15,14 +15,18 @@ from .baselines import (
     sun_wang_minimal_field,
 )
 from .constrained import ConstrainedResult, CRABSolver, GRAPESolver
+from .hybrid import HybridResult, HybridSolver, integrate_llg_sot
 
 __all__ = [
     "CRABSolver",
     "ConstantFieldProtocol",
+    "HybridResult",
+    "HybridSolver",
     "ConstrainedResult",
     "GRAPESolver",
     "PrecessionalProtocol",
     "ProtocolResult",
+    "integrate_llg_sot",
     "static_switching_field",
     "sun_wang_minimal_field",
 ]

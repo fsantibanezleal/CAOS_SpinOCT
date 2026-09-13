@@ -4,6 +4,15 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.07.000] - 2026-09-13
+
+### Added
+- spinoct.control.hybrid: joint field-plus-spin-orbit-torque optimal control (R13), the design space
+  the kickoff paper names as open. A SOT-augmented norm-preserving integrator (integrate_llg_sot) and
+  a HybridSolver that co-optimizes a band-limited field and current under a two-term cost
+  C_b int|b|^2 + C_j int|j|^2. Validated: a pure damping-like current drives the moment to the equator
+  (the SOT sign check), and the balanced co-optimization reverses using both controls. docs/theory/09.
+
 ## [0.06.000] - 2026-09-13
 
 ### Added
