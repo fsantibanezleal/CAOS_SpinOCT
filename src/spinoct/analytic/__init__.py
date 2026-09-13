@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .sot import SOTOptimalControl, ideal_sot_ratio_beta
 from .uniaxial import (
     SwitchingTimeTooLongError,
     UniaxialOptimalControl,
@@ -12,7 +13,9 @@ from .uniaxial import (
 )
 
 __all__ = [
+    "SOTOptimalControl",
     "SwitchingTimeTooLongError",
+    "ideal_sot_ratio_beta",
     "UniaxialOptimalControl",
     "cost_free_macrospin",
     "cost_infinite_time",
