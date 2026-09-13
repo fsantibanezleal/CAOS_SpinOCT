@@ -19,6 +19,14 @@
     "reason": "Dimensionless reversal-penalty weight, scaled by the free-macrospin cost so the penalty matches the cost scale. A unitless weight.",
     "source": "fidelity_weight = 50.0 * free"
   },
+  "src/spinoct/amortized.py::0.05": {
+    "reason": "Dimensionless default learning rate for the MLP gradient descent. An optimizer hyperparameter operating on normalized (order-unity) variables, not a physical quantity.",
+    "source": "learning_rate: float = 0.05,"
+  },
+  "src/spinoct/amortized.py::1e-12": {
+    "reason": "Dimensionless numerical floor added to a standard deviation before dividing, to guard against a degenerate zero-variance feature or target during normalization. Not a physical quantity.",
+    "source": "input_std = features.std(0) + 1e-12 (and target_std)"
+  },
   "src/spinoct/analytic/sot.py::1e-09": {
     "reason": "Dimensionless relative tolerance in math.isclose, comparing tan(beta) against alpha (both dimensionless) to detect the forbidden SOT ratio. Not a physical quantity.",
     "source": "return math.isclose(math.tan(self.beta), self.system.alpha, rel_tol=1e-9, abs_tol=1e-12)"

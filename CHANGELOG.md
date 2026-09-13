@@ -4,6 +4,17 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.09.000] - 2026-09-13
+
+### Added
+- spinoct.amortized: an amortized learned policy (R15), a small numpy MLP that emits a near-optimal
+  pulse for new material parameters instantly. Finding: the output representation decides whether
+  amortization works. Regressing the raw amplitude profile fails (switching is threshold-sensitive,
+  the emitted pulse is a few percent too weak and does not reverse); amortizing the physically
+  meaningful shape parameter succeeds, emitting pulses that reverse the moment at within ten percent
+  of the analytic optimum on held-out parameters. Passes the pre-declared acceptance gate.
+  docs/theory/11.
+
 ## [0.08.000] - 2026-09-13
 
 ### Added
