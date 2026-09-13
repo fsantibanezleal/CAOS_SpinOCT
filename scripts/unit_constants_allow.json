@@ -6,5 +6,37 @@
   "src/spinoct/analytic/uniaxial.py::1e-12": {
     "reason": "Dimensionless relative tolerance. It is compared against abs(t[0])/T, a ratio of two times, to decide whether a query grid begins at the initial time. It carries no unit of its own and only selects between the direct-on-grid integration path and the internal-grid fallback; the physics is identical either way.",
     "source": "_ORIGIN_RELATIVE_TOLERANCE = 1e-12"
+  },
+  "src/spinoct/numeric/image_ocp.py::0.05": {
+    "reason": "Angle in radians (dimensionless). The default symmetry-breaking perturbation of the initial chain for a single solve. Radians are dimensionless and this is a small arc-length nudge, not a physical observable.",
+    "source": "noise: float = 0.05,"
+  },
+  "src/spinoct/numeric/image_ocp.py::0.15": {
+    "reason": "Angle in radians (dimensionless). The default symmetry-breaking perturbation for the multi-seed sweep, larger than the single-solve default because the sweep explores distinct basins. Not a physical observable.",
+    "source": "noise: float = 0.15,"
+  },
+  "src/spinoct/numeric/image_ocp.py::0.9": {
+    "reason": "Dimensionless. A unit-vector component threshold: if the start direction is nearly along x (component above 0.9) the reference axis for the antipodal bend is taken along y instead, to keep it non-parallel. Compares a component of a unit vector against a pure number.",
+    "source": "reference = np.array([1.0, 0.0, 0.0]) if abs(start[0]) < 0.9 else np.array([0.0, 1.0, 0.0])"
+  },
+  "src/spinoct/numeric/image_ocp.py::1.2": {
+    "reason": "Dimensionless line-search step-growth factor. After an accepted descent step the trial step size is grown by 20 percent so that long shallow descents do not crawl. It multiplies a step size, not a physical quantity, and carries no unit; the backtracking line search re-shrinks it whenever it overshoots.",
+    "source": "step_size = trial_step * 1.2"
+  },
+  "src/spinoct/numeric/image_ocp.py::1e-06": {
+    "reason": "Angle in radians (dimensionless). The threshold within which the two endpoints count as antipodal, so the great circle is not unique and a bending axis is chosen. A geometric tolerance.",
+    "source": "if abs(angle - np.pi) < 1e-6:"
+  },
+  "src/spinoct/numeric/image_ocp.py::1e-07": {
+    "reason": "Dimensionless. The central-finite-difference step for perturbing a unit-vector component in the tangent-gradient evaluation. It perturbs a component of a unit vector (magnitude at most 1) and the result is re-projected onto the sphere; it carries no physical unit.",
+    "source": "step = 1e-7  # dimensionless perturbation of a unit-vector component, re-projected each step"
+  },
+  "src/spinoct/numeric/image_ocp.py::1e-09": {
+    "reason": "Angle in radians (dimensionless). The threshold below which two endpoint directions count as coincident, so the geodesic is a constant chain. A geometric tolerance, not a physical quantity.",
+    "source": "if angle < 1e-9:"
+  },
+  "src/spinoct/numeric/image_ocp.py::1e-12": {
+    "reason": "Dimensionless relative tolerance. Convergence when the relative decrease in cost between accepted steps falls below it, a ratio of two costs. Chosen relative precisely so it is unit-independent, unlike a gradient-magnitude tolerance.",
+    "source": "relative_tolerance: float = 1e-12,"
   }
 }
