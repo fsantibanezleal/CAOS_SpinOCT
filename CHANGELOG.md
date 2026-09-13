@@ -4,6 +4,16 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.05.000] - 2026-09-13
+
+### Added
+- spinoct.lattice: optimal control beyond the macrospin (Gap 1). A ferromagnetic spin chain with
+  nearest-neighbour exchange (SpinChain), validated against the analytic macrospin cost in the
+  one-site limit, and a reversal-mode comparison (uniform rotation vs a domain-wall sweep). Finding:
+  for the switching-cost metric, uniform rotation is the field-cost optimum across N=2-128 and
+  J/K=0.2-10, because the domain wall forces fast local flips and pays exchange; domain walls
+  dominate real switching for thermal-barrier reasons, not field-cost reasons. docs/theory/08.
+
 ## [0.04.000] - 2026-09-13
 
 ### Added

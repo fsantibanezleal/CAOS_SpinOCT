@@ -18,7 +18,7 @@ Start here
 
 from __future__ import annotations
 
-__version__ = "0.4.0"
-__display_version__ = "0.04.000"
+__version__ = "0.5.0"
+__display_version__ = "0.05.000"
 
 __all__ = ["__display_version__", "__version__"]
