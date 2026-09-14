@@ -53,11 +53,13 @@ everything slowly and uniformly is the cheap thing to do.
 ## What this is and is not
 
 This is a comparison of two specific reversal modes, a uniform rotation and a constant-speed tanh
-domain wall, not a free search over all chain trajectories. A full lattice optimal control path, the
-image-based solver of `spinoct.numeric` generalized to the chain with a per-site field, could in
-principle find a cheaper nonuniform mode. That free lattice solve is the manuscript-grade next step;
-this first comparison establishes the validation limit and finds uniform rotation optimal for the
-field-cost metric among the modes considered.
+domain wall, not a free search over all chain trajectories. Its conclusion holds only for that ansatz.
+
+**Superseded by the free search.** The free chain optimal control path
+([12](12-free-chain-optimal-control-and-the-barrier-floor.md)) finds that above a crossover length and
+at long switching time the optimal reversal IS a domain wall, strictly cheaper than uniform rotation
+(at least 16 percent for 16 sites, J/K = 10, alpha = 0.1, T = 150 tau0, verified by grid refinement,
+local consistency and forward dynamics). The constant-speed wall of this page is not the optimal wall.
 
 ## Sources
 

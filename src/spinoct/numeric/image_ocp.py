@@ -170,10 +170,10 @@ class ImageOCPSolver:
             Shape ``(N,)``, the squared field in T^2, one per pair.
         """
         midpoints = _normalize(left + right)
-        dot = np.clip(np.sum(left * right, axis=-1), -1.0, 1.0)
-        delta = np.arccos(dot)
         chord = right - left
         chord_norm = np.linalg.norm(chord, axis=-1, keepdims=True)
+        # Geodesic angle, exact at every angle (arccos of the dot loses precision for close images).
+        delta = 2.0 * np.arctan2(chord_norm[:, 0], np.linalg.norm(left + right, axis=-1))
         safe = chord_norm[:, 0] > 0.0
         direction = np.zeros_like(chord)
         direction[safe] = chord[safe] / chord_norm[safe]
@@ -186,10 +186,10 @@ class ImageOCPSolver:
         left = images[:-1]
         right = images[1:]
         midpoints = _normalize(left + right)
-        dot = np.clip(np.sum(left * right, axis=-1), -1.0, 1.0)
-        delta = np.arccos(dot)
         chord = right - left
         chord_norm = np.linalg.norm(chord, axis=-1, keepdims=True)
+        # Geodesic angle, exact at every angle (arccos of the dot loses precision for close images).
+        delta = 2.0 * np.arctan2(chord_norm[:, 0], np.linalg.norm(left + right, axis=-1))
         safe = chord_norm[:, 0] > 0.0
         direction = np.zeros_like(chord)
         direction[safe] = chord[safe] / chord_norm[safe]
