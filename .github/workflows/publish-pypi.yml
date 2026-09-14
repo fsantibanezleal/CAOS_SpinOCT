@@ -1,8 +1,8 @@
 # PyPI publish via Trusted Publishing (OIDC), per ADR-0061.
 # One-time human setup before the first release: register the pending publisher on pypi.org
-# (project spinoct, owner fsantibanezleal, repo CAOS_SpinOCT, workflow release.yml, environment pypi).
+# (project spinoct, owner fsantibanezleal, repo CAOS_SpinOCT, workflow publish-pypi.yml, environment pypi).
 # No stored token.
-name: release
+name: publish-pypi
 
 on:
   push:
