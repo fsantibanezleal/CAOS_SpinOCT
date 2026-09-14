@@ -5,16 +5,32 @@ macrospin approximation breaks down with size, and the transition may involve no
 domain-wall nucleation and propagation, or spin waves, and "it remains to be seen under what conditions
 these ... switching mechanisms become optimal in terms of energy efficiency."
 
-This module takes the first step past the macrospin that has been taken anywhere except a single 1D
-study: a ferromagnetic spin chain with nearest-neighbour exchange, where the reversal can be uniform
-(every spin rotates together) or nonuniform (a domain wall sweeps through). It computes the switching
-cost of each mode and finds the crossover, the size and exchange at which nonuniform switching becomes
-cheaper.
+This package answers it for a ferromagnetic spin chain with nearest-neighbour exchange, in three
+layers:
+
+- :mod:`.reversal` compares two fixed reversal modes, uniform rotation and a constant-speed wall.
+- :mod:`.ocp` minimizes the switching cost over every site's trajectory (the free optimal control
+  path), bounded above by uniform rotation.
+- :mod:`.mep` computes the minimum energy path, whose barrier sets a rigorous floor
+  ``4 alpha Delta E / (gamma mu)`` under every pulse at every switching time.
 """
 
 from __future__ import annotations
 
 from .chain import SpinChain
+from .mep import MinimumEnergyPath, cost_floor_from_barrier, minimum_energy_path
+from .ocp import LatticeOCPResult, LatticeOCPSolver
 from .reversal import ReversalComparison, compare_reversal_modes, domain_wall_cost, uniform_cost
 
-__all__ = ["ReversalComparison", "SpinChain", "compare_reversal_modes", "domain_wall_cost", "uniform_cost"]
+__all__ = [
+    "LatticeOCPResult",
+    "LatticeOCPSolver",
+    "MinimumEnergyPath",
+    "ReversalComparison",
+    "SpinChain",
+    "compare_reversal_modes",
+    "cost_floor_from_barrier",
+    "domain_wall_cost",
+    "minimum_energy_path",
+    "uniform_cost",
+]

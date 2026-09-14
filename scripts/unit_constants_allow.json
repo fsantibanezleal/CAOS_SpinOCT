@@ -87,6 +87,46 @@
     "reason": "Dimensionless penalty weight on the reversal infidelity, scaled by the free-macrospin cost so the penalty and the two-term cost are the same order of magnitude. A weight multiplying a cost scale, unitless.",
     "source": "return weighted + 50.0 * self._free * infidelity"
   },
+  "src/spinoct/lattice/mep.py::0.02": {
+    "reason": "String-method step on the force expressed in units of the anisotropy energy per site; dimensionless, the images are unit vectors.",
+    "source": "_STEP = 0.02"
+  },
+  "src/spinoct/lattice/mep.py::1e-06": {
+    "reason": "Default force tolerance in units of the anisotropy energy per site; dimensionless.",
+    "source": "force_tolerance: float = 1e-6,"
+  },
+  "src/spinoct/lattice/ocp.py::0.05": {
+    "reason": "Default symmetry-breaking perturbation, radians on the unit sphere; dimensionless.",
+    "source": "noise: float = 0.05,"
+  },
+  "src/spinoct/lattice/ocp.py::0.15": {
+    "reason": "Largest geodesic step per interval of the single-site optimum, radians on the unit sphere; dimensionless resolution rule (coarser grids alias the precession).",
+    "source": "_MAX_STEP_ANGLE = 0.15"
+  },
+  "src/spinoct/lattice/ocp.py::0.25": {
+    "reason": "Largest wall displacement per interval, in wall widths; dimensionless resolution rule.",
+    "source": "_MAX_WALL_STEP = 0.25"
+  },
+  "src/spinoct/lattice/ocp.py::1.5": {
+    "reason": "Backtracking step growth factor in the descent reference; dimensionless.",
+    "source": "step = min(trial_step * 1.5, 0.5)"
+  },
+  "src/spinoct/lattice/ocp.py::1e-07": {
+    "reason": "Central-difference step on a unit-vector component; dimensionless, the image lives on the unit sphere.",
+    "source": "_FD_STEP = 1e-7"
+  },
+  "src/spinoct/lattice/ocp.py::1e-10": {
+    "reason": "Default relative cost-reduction tolerance; dimensionless ratio.",
+    "source": "relative_tolerance: float = 1e-10,"
+  },
+  "src/spinoct/lattice/ocp.py::1e-12": {
+    "reason": "L-BFGS projected-gradient tolerance on the objective normalized by the analytic uniform-path cost and on unit-vector variables; dimensionless.",
+    "source": "options={\"maxiter\": max_iterations, \"ftol\": relative_tolerance, \"gtol\": 1e-12},"
+  },
+  "src/spinoct/lattice/ocp.py::1e-13": {
+    "reason": "Relative cost-reduction tolerance for the single-site reference solve; dimensionless ratio on a cost normalized by the analytic uniform path.",
+    "source": "_BOUND_TOLERANCE = 1e-13"
+  },
   "src/spinoct/lattice/reversal.py::1.5": {
     "reason": "Dimensionless. The domain-wall width in units of the site spacing (default 1.5 lattice sites). A geometric width in lattice units, not a physical field or energy; it sets how many sites the tanh wall spans.",
     "source": "wall_width: float = 1.5"

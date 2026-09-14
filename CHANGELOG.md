@@ -4,6 +4,28 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.10.000] - 2026-09-13
+
+### Added
+- spinoct.lattice.LatticeOCPSolver: the free optimal control path of a spin chain, the image-based
+  direct minimization generalized to N coupled sites. Exact central-difference gradient by graph
+  coloring (36 cost evaluations per gradient, independent of chain length and image count), L-BFGS on
+  normalized vectors, analytic-optimum seeds (uniform, tanh wall on the optimum's azimuth, minimum
+  energy path), and an exact upper bound (the single-site optimum on every site).
+  recommended_images resolves both the precession and a wall crossing.
+- spinoct.lattice.minimum_energy_path and cost_floor_from_barrier: the climbing-image geodesic string
+  method, and the rigorous floor Phi >= 4 alpha dE_MEP / (gamma mu) that holds for every pulse at every
+  switching time (tight for the single uniaxial site, where it equals Phi_inf).
+- Finding: above the barrier crossover length and at long switching time the optimal reversal of a
+  chain is a domain wall, strictly cheaper than uniform rotation (at least 16 percent for 16 sites,
+  J/K = 10, alpha = 0.1, T = 150 tau0), verified by grid refinement, local consistency and open-loop
+  forward dynamics. Supersedes the two-mode conclusion of docs/theory/08. docs/theory/12.
+
+### Fixed
+- The geodesic angle between neighbouring images is computed as 2 atan2(|r - l|, |r + l|) in both the
+  chain and the macrospin image solvers. arccos of the dot product lost all precision for nearly
+  coincident images and turned the finite-difference gradient there into rounding noise.
+
 ## [0.09.000] - 2026-09-13
 
 ### Added
