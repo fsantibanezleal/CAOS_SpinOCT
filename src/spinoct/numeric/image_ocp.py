@@ -59,7 +59,10 @@ __all__ = ["ImageOCPResult", "ImageOCPSolver"]
 
 #: Resolution rule for :meth:`ImageOCPSolver.recommended_images`: the largest geodesic step per
 #: interval (rad), the samples used to measure the path's arc, and the floor on the image count.
-_MAX_STEP_ANGLE = 0.15
+#: Measured at T = 100 tau0 with the L-BFGS minimizer: 0.15 rad leaves the cost 1.4 per cent above the
+#: closed form, 0.1 rad leaves 0.7 per cent, and finer grids do not improve further (the iteration
+#: budget binds, not the discretization).
+_MAX_STEP_ANGLE = 0.1
 _ARC_SAMPLES = 4001
 _MIN_IMAGES = 60
 
@@ -165,7 +168,9 @@ class ImageOCPSolver:
         at ``T = 100 tau0``.
 
         The rule samples the closed-form path and asks for no more than ``_MAX_STEP_ANGLE`` radians per
-        interval, with a floor of 60 images. For a biaxial system the uniaxial path of the same easy-axis
+        interval, with a floor of 60 images; with the L-BFGS minimizer that keeps the numerical cost
+        within about one per cent of the closed form across the switching times the product bakes.
+        For a biaxial system the uniaxial path of the same easy-axis
         anisotropy is used as the estimate, which is the right order because the arc is set by the
         precession the pulse has to follow.
 
@@ -290,6 +295,47 @@ class ImageOCPSolver:
         longitudinal = np.sum(grad * interior, axis=-1, keepdims=True)
         return grad - longitudinal * interior
 
+    # ------------------------------------------------------------------ the minimizers
+
+    def _minimize_lbfgs(
+        self,
+        start: np.ndarray,
+        end: np.ndarray,
+        interior: np.ndarray,
+        max_iterations: int,
+        relative_tolerance: float,
+    ) -> tuple[np.ndarray, list[float], bool, int]:
+        """L-BFGS over unconstrained vectors ``x`` with ``s = x / |x|``.
+
+        The cost depends on ``x`` only through its direction, so the Euclidean gradient is the
+        tangent-projected sphere gradient divided by ``|x|``. The objective is divided by the cost of the
+        starting chain so the optimizer sees order-unity numbers rather than the 1e-12 T^2 s of a
+        physical cost, which would otherwise meet its tolerances before taking a step.
+        """
+        from scipy.optimize import minimize
+
+        shape = interior.shape
+        scale = max(self.cost_of(np.vstack([start, interior, end])), np.finfo(float).tiny)
+        history: list[float] = []
+
+        def objective(vector: np.ndarray) -> tuple[float, np.ndarray]:
+            raw = vector.reshape(shape)
+            norms = np.linalg.norm(raw, axis=-1, keepdims=True)
+            chain = np.vstack([start, raw / norms, end])
+            cost = self.cost_of(chain)
+            history.append(cost)
+            grad = self._tangent_gradient(chain) / norms
+            return cost / scale, grad.reshape(-1) / scale
+
+        result = minimize(
+            objective,
+            interior.reshape(-1),
+            jac=True,
+            method="L-BFGS-B",
+            options={"maxiter": max_iterations, "ftol": relative_tolerance, "gtol": 1e-14},
+        )
+        return _normalize(result.x.reshape(shape)), history, bool(result.success), int(result.nit)
+
     # ------------------------------------------------------------------ the solve
 
     def solve(
@@ -298,10 +344,16 @@ class ImageOCPSolver:
         relative_tolerance: float = 1e-12,
         seed: int | None = 0,
         noise: float = 0.05,
+        method: str = "lbfgs",
     ) -> ImageOCPResult:
-        """Minimize the cost by projected gradient descent with geodesic retraction.
+        """Minimize the cost over the interior images.
 
         Args:
+            method: ``"lbfgs"`` (default), a quasi-Newton minimization over unconstrained vectors with
+                ``s = x / |x|``, or ``"descent"``, the projected gradient descent with geodesic
+                retraction kept as the reference. Descent converges slowly on long switching times,
+                where the path spirals: at ``T = 100 tau0`` it sat 12 per cent above the closed form
+                after 2500 iterations and was still 4 per cent above it after 40000.
             max_iterations: the descent iteration cap.
             relative_tolerance: convergence when the relative decrease in cost between successive
                 accepted steps falls below this. **Dimensionless on purpose.** A gradient-magnitude
@@ -331,6 +383,24 @@ class ImageOCPSolver:
             chain[1:-1] = _normalize(chain[1:-1] + perturbation)
 
         interior = chain[1:-1].copy()
+
+        if method == "lbfgs":
+            interior, history, converged, iterations_done = self._minimize_lbfgs(
+                start, end, interior, max_iterations, relative_tolerance
+            )
+            chain = np.vstack([start, interior, end])
+            return ImageOCPResult(
+                images=chain,
+                times=self.times,
+                cost=self.cost_of(chain),
+                field_midpoints=self._midpoint_fields(chain),
+                converged=converged,
+                iterations=iterations_done,
+                final_force=float(np.max(np.linalg.norm(self._tangent_gradient(chain), axis=-1))),
+                history=np.asarray(history),
+            )
+        if method != "descent":
+            raise ValueError("method must be 'lbfgs' or 'descent'")
 
         # An adaptive step size with backtracking. The cost surface is smooth but the natural scale of
         # the gradient varies over orders of magnitude with the switching time, so a fixed step is

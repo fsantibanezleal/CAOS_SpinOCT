@@ -139,6 +139,10 @@
     "reason": "Angle in radians (dimensionless). The default symmetry-breaking perturbation of the initial chain for a single solve. Radians are dimensionless and this is a small arc-length nudge, not a physical observable.",
     "source": "noise: float = 0.05,"
   },
+  "src/spinoct/numeric/image_ocp.py::0.1": {
+    "reason": "Largest geodesic step per interval of the resolution rule, radians on the unit sphere; dimensionless, measured (0.15 rad leaves 1.4 per cent of discretization error at T = 100 tau0, 0.1 rad leaves 0.7).",
+    "source": "_MAX_STEP_ANGLE = 0.1"
+  },
   "src/spinoct/numeric/image_ocp.py::0.15": {
     "reason": "Angle in radians (dimensionless). The default symmetry-breaking perturbation for the multi-seed sweep, larger than the single-solve default because the sweep explores distinct basins. Not a physical observable.",
     "source": "noise: float = 0.15,"
@@ -166,6 +170,10 @@
   "src/spinoct/numeric/image_ocp.py::1e-12": {
     "reason": "Dimensionless relative tolerance. Convergence when the relative decrease in cost between accepted steps falls below it, a ratio of two costs. Chosen relative precisely so it is unit-independent, unlike a gradient-magnitude tolerance.",
     "source": "relative_tolerance: float = 1e-12,"
+  },
+  "src/spinoct/numeric/image_ocp.py::1e-14": {
+    "reason": "L-BFGS projected-gradient tolerance on an objective divided by the starting cost and on unit-vector variables; dimensionless.",
+    "source": "options={\"maxiter\": max_iterations, \"ftol\": relative_tolerance, \"gtol\": 1e-14},"
   },
   "src/spinoct/pareto.py::1e-18": {
     "reason": "Dimensionless numerical tolerance in the Pareto-dominance comparison, guarding floating-point ties when deciding 'at least as good' and 'strictly better'. Not a physical quantity.",

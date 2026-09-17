@@ -4,6 +4,19 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.12.000] - 2026-09-17
+
+### Changed
+- ImageOCPSolver.solve minimizes with L-BFGS over normalized vectors by default; the projected gradient
+  descent with geodesic retraction stays available as `method="descent"` and as the reference. Measured
+  against the closed form: at T = 10 tau0 the new default converges in 205 iterations where descent was
+  still moving at 2500, and at T = 100 tau0 it reaches 1.5 per cent above the closed form in the budget
+  where descent reached 12 per cent (and 4 per cent after sixteen times the iterations).
+- The resolution rule tightened to 0.1 rad per interval, measured: 0.15 rad leaves 1.4 per cent of
+  discretization error at T = 100 tau0 and 0.1 rad leaves 0.7 per cent, below which the iteration budget
+  binds rather than the grid. Together the two changes keep the numerical optimum within about one per
+  cent of the closed form across the switching times the product bakes, where it was 20 per cent adrift.
+
 ## [0.11.000] - 2026-09-17
 
 ### Added
