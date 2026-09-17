@@ -32,12 +32,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
-from scipy.optimize import minimize
 
+from ..adjoint import adjoint_gradient_sot
 from ..dynamics.llg import switching_cost
 from ..dynamics.system import MacrospinSystem
+from .linear_basis import harmonic_design
 
 __all__ = ["HybridResult", "HybridSolver", "integrate_llg_sot"]
+
+#: The reversal penalty starts at this multiple of the field cost of a free-macrospin reversal and
+#: is raised until the moment reverses, the same continuation the constrained solvers use.
+_FIDELITY_WEIGHT_SCALE = 50.0
+_TARGET_INFIDELITY = 1e-5
+_SWITCHED_INFIDELITY = 1e-3
+_PENALTY_GROWTH = 10.0
+_MAX_PENALTY_ROUNDS = 8
 
 _E_Z = np.array([0.0, 0.0, 1.0])
 
@@ -180,55 +189,88 @@ class HybridSolver:
 
         self._free = cost_free_macrospin(switching_time, system.alpha, system.gamma)
 
+    def _design(self) -> np.ndarray:
+        """The shared harmonic basis for both controls, sine and cosine per harmonic.
+
+        Both quadratures are needed for the same reason as in CRAB: with sine terms only the two
+        transverse components share a phase, so neither the field nor the current can rotate, and a
+        rotating drive is what reverses a moment cheaply.
+        """
+        frequencies = np.arange(1, self.n_harmonics + 1) / self.switching_time
+        return harmonic_design(frequencies, self._grid, self.switching_time)
+
     def _tables(self, params: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """Build the field and current tables from the Fourier coefficients."""
-        n = self.n_harmonics
-        envelope = np.sin(np.pi * self._grid / self.switching_time)
+        """Build the field (T) and current (reduced) tables from the basis coefficients.
+
+        The parameter vector is four blocks: field x, field y, current x, current y. The field blocks
+        are in units of the anisotropy field and the current blocks in the reduced units the
+        spin-orbit-torque coupling is defined in, so every parameter is order one.
+        """
+        design = self._design()
+        width = design.shape[1]
+        blocks = np.asarray(params, dtype=float).reshape(4, width)
         field = np.zeros((self._grid.size, 3))
         current = np.zeros((self._grid.size, 3))
-        idx = 0
-        for comp in (0, 1):  # transverse x, y for both field and current
-            for h in range(1, n + 1):
-                phase = np.sin(2.0 * np.pi * h * self._grid / self.switching_time)
-                field[:, comp] += params[idx] * phase * envelope
-                idx += 1
-                current[:, comp] += params[idx] * phase * envelope
-                idx += 1
+        field[:, :2] = design @ blocks[:2].T * self.system.anisotropy_field
+        current[:, :2] = design @ blocks[2:].T
         return field, current
 
-    def _objective(self, params: np.ndarray) -> float:
+    def _objective_and_gradient(self, params: np.ndarray, fidelity_weight: float):
+        """The weighted cost with its exact gradient, from one backward pass over both controls."""
+        design = self._design()
+        width = design.shape[1]
         field, current = self._tables(params)
-        trajectory = integrate_llg_sot(
-            np.array([0.0, 0.0, 1.0]), field, current, self._grid, self.system, self.xi_f, self.xi_d
+        objective, final_sz, grad_field, grad_current = adjoint_gradient_sot(
+            field,
+            current,
+            self._grid,
+            self.system,
+            self.xi_f,
+            self.xi_d,
+            fidelity_weight,
+            field_weight=self.circuit_field,
+            current_weight=self.circuit_current,
         )
-        final_sz = float(trajectory[-1, 2])
-        field_cost = switching_cost(self._grid, field)
-        current_cost = switching_cost(self._grid, current)
-        weighted = self.circuit_field * field_cost + self.circuit_current * current_cost
-        infidelity = 0.5 * (1.0 + final_sz)
-        return weighted + 50.0 * self._free * infidelity
+        scale = max(self.circuit_field * self._free, 1e-300)
+        grad_blocks = np.empty((4, width))
+        grad_blocks[:2] = (design.T @ grad_field[:, :2]).T * self.system.anisotropy_field
+        grad_blocks[2:] = (design.T @ grad_current[:, :2]).T
+        return objective / scale, grad_blocks.reshape(-1) / scale, final_sz
 
     def solve(self, seed: int = 0, max_iterations: int = 200) -> HybridResult:
-        """Co-optimize the field and the current.
+        """Co-optimize the field and the current on the exact adjoint gradient.
+
+        The reversal penalty is raised and the solve restarted until the moment actually reverses, so a
+        reported cost never belongs to a pulse that stopped half way.
 
         Args:
             seed: initial-guess seed.
-            max_iterations: optimizer iteration cap.
+            max_iterations: optimizer iteration cap per penalty round.
 
         Returns:
             The :class:`HybridResult`.
         """
+        from scipy.optimize import minimize
+
+        design = self._design()
         rng = np.random.default_rng(seed)
-        n_params = 4 * self.n_harmonics  # 2 controls x 2 components x n harmonics
-        scale = 0.5 * self.system.anisotropy_field
-        initial = rng.normal(scale=scale, size=n_params)
-        result = minimize(
-            self._objective,
-            initial,
-            method="Nelder-Mead",
-            options={"maxiter": max_iterations * n_params, "xatol": 1e-9, "fatol": 1e-30},
-        )
-        field, current = self._tables(result.x)
+        vector = rng.normal(scale=0.5, size=4 * design.shape[1])
+        weight = _FIDELITY_WEIGHT_SCALE * self.circuit_field * self._free
+        for _round in range(_MAX_PENALTY_ROUNDS):
+            result = minimize(
+                lambda p, w=weight: self._objective_and_gradient(p, w)[:2],
+                vector,
+                jac=True,
+                method="L-BFGS-B",
+                options={"maxiter": max_iterations, "ftol": 1e-14, "gtol": 1e-12},
+            )
+            vector = result.x
+            _value, _grad, final_sz = self._objective_and_gradient(vector, weight)
+            if 0.5 * (1.0 + final_sz) <= _TARGET_INFIDELITY:
+                break
+            weight *= _PENALTY_GROWTH
+
+        field, current = self._tables(vector)
         trajectory = integrate_llg_sot(
             np.array([0.0, 0.0, 1.0]), field, current, self._grid, self.system, self.xi_f, self.xi_d
         )
@@ -245,6 +287,6 @@ class HybridSolver:
             current_cost=current_cost,
             weighted_cost=weighted,
             field_fraction=field_share,
-            switched=final_sz < 0.0,
+            switched=0.5 * (1.0 + final_sz) <= _SWITCHED_INFIDELITY,
             final_sz=final_sz,
         )
