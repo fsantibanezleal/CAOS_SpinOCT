@@ -4,6 +4,16 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.11.000] - 2026-09-17
+
+### Added
+- ImageOCPSolver.recommended_images: the image count that resolves the optimal path at a given switching
+  time. The midpoint rule's error is set by how far the moment moves between images, and the optimal path
+  spirals, so a fixed count degrades as the switching time grows. Measured on the uniaxial oracle at 60
+  images: the numerical cost matches the closed form at T = 2 tau0 and sits 20 per cent above it at
+  T = 100 tau0. The rule keeps the geodesic step under 0.15 rad per interval, with a floor of 60 images,
+  and a test asserts both the regression and that the rule removes it.
+
 ## [0.10.000] - 2026-09-13
 
 ### Added

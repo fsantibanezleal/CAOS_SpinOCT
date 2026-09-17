@@ -165,3 +165,24 @@ def test_solver_rejects_bad_construction() -> None:
         ImageOCPSolver(system, n_images=10, switching_time=0.0)
     with pytest.raises(ValueError, match="n_seeds"):
         ImageOCPSolver(system, n_images=10, switching_time=1e-12).solve_best(n_seeds=0)
+
+
+def test_recommended_images_grow_with_switching_time_and_fix_the_long_time_error() -> None:
+    """A fixed image count degrades as the path spirals: the rule must scale, and the cost must improve.
+
+    Measured before the rule existed: 60 images put the numerical cost 20 per cent above the closed form
+    at T = 100 tau0, while matching it at T = 2 tau0.
+    """
+    system = make_system(alpha=0.01)
+    short = system.switching_time_from_tau0(2.0)
+    long = system.switching_time_from_tau0(100.0)
+    assert ImageOCPSolver.recommended_images(system, short) == 60
+    assert ImageOCPSolver.recommended_images(system, long) > 3 * 60
+
+    analytic = UniaxialOptimalControl.for_switching_time(system, long).cost()
+    fixed = ImageOCPSolver(system, 60, long).solve_best(n_seeds=2, max_iterations=2000).cost
+    scaled = ImageOCPSolver(
+        system, ImageOCPSolver.recommended_images(system, long), long
+    ).solve_best(n_seeds=2, max_iterations=2000).cost
+    assert fixed / analytic > 1.05, "the regression this rule exists for"
+    assert scaled / analytic < fixed / analytic

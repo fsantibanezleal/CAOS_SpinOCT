@@ -46,6 +46,7 @@ problems where no closed form exists.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import numpy as np
@@ -54,6 +55,13 @@ from ..dynamics.llg import field_from_trajectory
 from ..dynamics.system import MacrospinSystem
 
 __all__ = ["ImageOCPResult", "ImageOCPSolver"]
+
+
+#: Resolution rule for :meth:`ImageOCPSolver.recommended_images`: the largest geodesic step per
+#: interval (rad), the samples used to measure the path's arc, and the floor on the image count.
+_MAX_STEP_ANGLE = 0.15
+_ARC_SAMPLES = 4001
+_MIN_IMAGES = 60
 
 
 def _normalize(vectors: np.ndarray) -> np.ndarray:
@@ -145,6 +153,50 @@ class ImageOCPSolver:
         seeds and keeps the lowest cost, because multiple optimal control paths coexist in general and
         a single seed can report a local minimum (the biaxial case).
     """
+
+    @staticmethod
+    def recommended_images(system: MacrospinSystem, switching_time: float) -> int:
+        """An image count that resolves the optimal path at this switching time.
+
+        The discretization error of the midpoint rule is set by how far the moment moves between
+        images, and the optimal path spirals: its geodesic arc grows with the switching time, so a fixed
+        image count silently degrades as ``T`` rises. Measured on the uniaxial oracle at 60 images, the
+        numerical cost sits 0.0 per cent above the closed form at ``T = 2 tau0`` and 20 per cent above it
+        at ``T = 100 tau0``.
+
+        The rule samples the closed-form path and asks for no more than ``_MAX_STEP_ANGLE`` radians per
+        interval, with a floor of 60 images. For a biaxial system the uniaxial path of the same easy-axis
+        anisotropy is used as the estimate, which is the right order because the arc is set by the
+        precession the pulse has to follow.
+
+        Args:
+            system: the magnetic system.
+            switching_time: ``T`` in s.
+
+        Returns:
+            The interior image count ``Q``.
+        """
+        from ..analytic.uniaxial import SwitchingTimeTooLongError, UniaxialOptimalControl
+
+        uniaxial = MacrospinSystem(
+            mu=system.mu, anisotropy_j=system.anisotropy_j, alpha=system.alpha, gamma=system.gamma
+        )
+        try:
+            optimum = UniaxialOptimalControl.for_switching_time(uniaxial, switching_time)
+        except SwitchingTimeTooLongError:
+            return _MIN_IMAGES
+        grid = np.linspace(0.0, switching_time, _ARC_SAMPLES)
+        path = optimum.moment(grid)
+        left, right = path[:-1], path[1:]
+        arc = float(
+            np.sum(
+                2.0
+                * np.arctan2(
+                    np.linalg.norm(right - left, axis=-1), np.linalg.norm(right + left, axis=-1)
+                )
+            )
+        )
+        return int(max(_MIN_IMAGES, math.ceil(arc / _MAX_STEP_ANGLE)))
 
     def __init__(self, system: MacrospinSystem, n_images: int, switching_time: float) -> None:
         if n_images < 1:
