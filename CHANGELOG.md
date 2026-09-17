@@ -4,6 +4,48 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.13.000] - 2026-09-17
+
+### Changed
+- **The constrained solvers are driven by the exact adjoint gradient.** GRAPE, CRAB and the
+  field-plus-current hybrid all parameterize the control linearly, so the gradient with respect to the
+  parameters is one transposed multiply from the gradient with respect to the field, which the discrete
+  adjoint returns in a single backward pass. GRAPE had been running L-BFGS-B on a finite-difference
+  gradient; CRAB and the hybrid solver had been running a Nelder-Mead simplex over a few dozen
+  parameters, which does not converge. Measured on the uniaxial oracle at ten tau0: CRAB took 90 to 230
+  seconds per solve and returned 2.2 times the analytic optimum at two harmonics rising to 14 times at
+  six, where a strictly larger search space cannot cost more. It now falls monotonically, 2.15 at one
+  harmonic to 1.13 at six, in 10 to 90 seconds.
+- **The CRAB basis carries both quadratures.** With one sine per harmonic the two transverse components
+  shared a phase at every frequency, so the drive was linear in the plane and could not rotate. The
+  optimal uniaxial pulse is a rotating field, so the basis paid an artificial penalty that no amount of
+  bandwidth could remove: 6.2 times the analytic optimum, flat in the harmonic count.
+- **A reported cost now belongs to a pulse that actually reversed the moment.** The penalized objective
+  trades fidelity against cost, so a single solve at a fixed weight returns a cheap pulse that stops part
+  way: at one harmonic it stopped at an infidelity of 0.15, that is s_z(T) = -0.69, and quoted its cost
+  against an optimum that reverses exactly. The solvers now raise the penalty and restart until the
+  infidelity is below 1e-5, and `switched` means `(1 + s_z(T)) / 2 <= 1e-3` rather than merely
+  `s_z(T) < 0`.
+- The constrained solvers integrate on 2400 steps by default, where the adjoint's forward Euler pass and
+  the reporting RK4 pass agree to 4e-5 in the final s_z.
+
+### Added
+- `spinoct.adjoint.adjoint_gradient_sot`: the discrete adjoint extended to the spin-orbit-torque
+  dynamics, returning the exact gradient with respect to the field AND the current in one backward pass.
+  Verified against finite differences to one part in ten to the fifth.
+- `spinoct.control.linear_basis`: the shared machinery for a control that is linear in its parameters
+  (the design matrix, the chain rule, the penalty continuation), with the interpolation and harmonic
+  bases.
+- `docs/theory/13-constrained-control-and-the-price-of-realizability.md`: the missing theory page for
+  the constrained rungs, with what they measure and the two defects that shipped before them.
+
+### Fixed
+- The monotonicity test that should have caught all of this. It asserted that a richer basis reversed
+  "at least as completely" as a poorer one, with a slack of 0.2 in the final s_z, which almost anything
+  satisfies. It now asserts the inequality on the cost, which is what the method reports, and requires
+  every answer to be a real reversal first. A second test asserts that no constrained pulse can cost
+  less than the analytic optimum.
+
 ## [0.12.000] - 2026-09-17
 
 ### Changed
