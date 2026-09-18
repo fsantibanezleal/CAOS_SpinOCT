@@ -225,3 +225,35 @@ at least the values quoted), and whether the floor is tight for walls in the lon
   The simplified string method.
 - P. F. Bessarab, V. M. Uzdin, H. Jonsson, Comput. Phys. Commun. 196, 335 (2015),
   https://doi.org/10.1016/j.cpc.2015.07.001. Geodesic minimum energy paths for magnetic systems.
+
+## Two dimensions: the square patch
+
+A chain is a line through a memory element; the element itself is a patch. `spinoct.lattice.SpinPatch`
+is a `W x H` square patch with the same energy, `E = -K sum s_z^2 - J sum_<ij> s_i . s_j`, over the
+four in-plane neighbours, with open boundaries. Both solvers run on it unchanged, because they reach the
+lattice through five operations only: the batched internal field (and its energy and gradient), a
+colouring whose classes have disjoint closed neighbourhoods, the footprint sum, the coordinate a wall
+travels along, and the coordination that sets the string method's stability limit (`2 + 2 z J / K`, with
+`z = 2` on a chain and `4` on a patch). The chain implements the same operations with its original
+arithmetic, and its results are bit-identical before and after the generalization.
+
+The gradient colouring. Perturbing one site changes the cost of its closed neighbourhood, itself and its
+four neighbours. The colouring `(x + 2 y) mod 5` gives every site of a closed neighbourhood a different
+colour, and two sites of one colour have disjoint closed neighbourhoods (the five-colour perfect code of
+the square grid). So the exact gradient costs `2 x 5 x 3 x 2 = 60` cost evaluations whatever the patch
+size, against 36 on a chain; a test checks it against a brute-force gradient.
+
+A check that caught a defect. A straight wall across a patch, uniform along `y`, pays no exchange
+between rows, so its barrier is exactly `H` times the chain barrier of width `W`. The first run returned
+the saturated chain value (8.867 K) for every patch size, because the string method still computed a
+chain's energy and forces whatever lattice it received, treating the flattened patch as one long snake of
+sites. Routed through the lattice, the barrier is `H` times the chain's to machine precision (a test
+asserts it at 8 x 4 and 16 x 8). The string method finds the converged path nearest its seed, so this
+establishes the straight wall as a minimum energy path, not that no curved path, a wall nucleating at a
+corner for instance, is lower.
+
+A first result. On a 16 x 4 patch at `J/K = 10`, `alpha = 0.5` and `T = 160 tau0`, the minimum-energy-path
+seed reaches 0.657 of the uniform bound after 400 iterations and still descending, above the barrier
+floor of 0.462, with a nonuniformity of 0.61: the wall-mediated reversal that becomes optimal for long
+chains at long switching time is also cheaper than uniform rotation in two dimensions. The tanh-wall
+seed stalls at 3.76 times the bound, the same trap the chain showed before the MEP seed existed.

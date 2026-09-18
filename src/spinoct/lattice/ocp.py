@@ -51,9 +51,9 @@ __all__ = ["LatticeOCPResult", "LatticeOCPSolver"]
 #: is re-projected onto the sphere by the retraction.
 _FD_STEP = 1e-7
 
-#: Temporal and spatial coloring periods. An image touches 2 intervals and 3 sites.
+#: Temporal colouring period: an image touches 2 intervals. The spatial colouring comes from the
+#: lattice (3 classes on a chain, 5 on a square patch).
 _TIME_COLORS = 2
-_SPACE_COLORS = 3
 
 #: Dense samples of the analytic single-site optimum used to build seeds by interpolation.
 _SEED_SAMPLES = 4001
@@ -132,14 +132,8 @@ class LatticeOCPSolver:
     # ------------------------------------------------------------------ the field and the cost
 
     def _internal_field_batched(self, spins: np.ndarray) -> np.ndarray:
-        """Chain internal field for a stack of configurations, shape ``(P, N, 3)``."""
-        chain = self.chain
-        out = np.zeros_like(spins)
-        out[..., 2] += 2.0 * chain.anisotropy_j / chain.mu * spins[..., 2]
-        coupling = chain.exchange_j / chain.mu
-        out[:, :-1, :] += coupling * spins[:, 1:, :]
-        out[:, 1:, :] += coupling * spins[:, :-1, :]
-        return out
+        """The lattice's internal field for a stack of configurations, shape ``(P, N, 3)``."""
+        return self.chain.internal_field_batched(spins)
 
     def cost_matrix(self, images: np.ndarray) -> np.ndarray:
         """The squared applied field per interval and site, times ``dt``, shape ``(Q + 1, N)``."""
@@ -174,13 +168,16 @@ class LatticeOCPSolver:
         grad = np.zeros_like(images)
         interior_q = np.arange(1, q_total - 1)
         sites = np.arange(n_sites)
+        # The lattice supplies a colouring whose classes have disjoint closed neighbourhoods: three
+        # classes on a chain, five on a square patch.
+        colors = self.chain.colors()
 
         for tc in range(_TIME_COLORS):
             q_sel = interior_q[(interior_q % _TIME_COLORS) == tc]
             if q_sel.size == 0:
                 continue
-            for sc in range(_SPACE_COLORS):
-                i_sel = sites[(sites % _SPACE_COLORS) == sc]
+            for sc in range(int(colors.max()) + 1):
+                i_sel = sites[colors == sc]
                 if i_sel.size == 0:
                     continue
                 qq, ii = np.meshgrid(q_sel, i_sel, indexing="ij")
@@ -190,9 +187,8 @@ class LatticeOCPSolver:
                     minus = images.copy()
                     minus[qq, ii, component] -= _FD_STEP
                     diff = self.cost_matrix(plus) - self.cost_matrix(minus)  # (Q+1, N)
-                    # Sum each image's footprint: intervals q-1, q and sites i-1..i+1.
-                    padded = np.pad(diff, ((0, 0), (1, 1)))
-                    spatial = padded[:, :-2] + padded[:, 1:-1] + padded[:, 2:]  # (Q+1, N)
+                    # Sum each image's footprint: intervals q-1, q and the site's closed neighbourhood.
+                    spatial = self.chain.footprint_sum(diff)  # (Q+1, N)
                     footprint = spatial[qq - 1, ii] + spatial[qq, ii]
                     grad[qq, ii, component] = footprint / (2.0 * _FD_STEP)
 
@@ -264,7 +260,7 @@ class LatticeOCPSolver:
         )))
         width = max(1.0, probe.wall_width_sites())
         by_arc = np.ceil(arc / _MAX_STEP_ANGLE)
-        by_wall = np.ceil((chain.n_sites + 4.0 * width) / (_MAX_WALL_STEP * width))
+        by_wall = np.ceil((chain.wall_extent() + 4.0 * width) / (_MAX_WALL_STEP * width))
         return int(max(_MIN_IMAGES, by_arc, by_wall))
 
     def wall_width_sites(self) -> float:
@@ -287,11 +283,11 @@ class LatticeOCPSolver:
         where the midpoint rule is singular. That seed started at 12000 times the uniform bound and
         pinned the optimizer at 51 times it.
         """
-        n = self.chain.n_sites
+        extent = self.chain.wall_extent()
         fractions = np.linspace(0.0, 1.0, self.n_images + 2)
-        sites = np.arange(n)
+        sites = self.chain.wall_coordinate()
         width = max(1.0, self.wall_width_sites())
-        centre = -2.0 * width + (n - 1 + 4.0 * width) * fractions
+        centre = -2.0 * width + (extent - 1 + 4.0 * width) * fractions
         progress = 0.5 * (1.0 + np.tanh((centre[:, None] - sites[None, :]) / width))
         progress = (progress - progress[0]) / (progress[-1] - progress[0])
         theta = np.pi * progress

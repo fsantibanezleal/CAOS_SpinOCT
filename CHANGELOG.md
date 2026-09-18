@@ -4,6 +4,26 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.16.000] - 2026-09-18
+
+### Added
+- `spinoct.lattice.SpinPatch`: a two-dimensional `W x H` square patch with nearest-neighbour exchange and
+  uniaxial anisotropy. The free optimal-control solver and the string method run on it unchanged: both
+  now reach the lattice through five operations (the batched field, energy and gradient; a colouring
+  with disjoint closed neighbourhoods; the footprint sum; a wall coordinate; the coordination), which the
+  chain implements with its original arithmetic. A chain solve and its barrier are bit-identical before
+  and after (cost 1.0513818230273711e-10, barrier 2.090615508830735e-22 J, same iteration counts).
+- The five-colour gradient on the patch, `(x + 2 y) mod 5`: 60 cost evaluations for the exact gradient
+  at any patch size, checked against a brute-force gradient.
+- A first two-dimensional result on theory page 12: on a 16 x 4 patch at long switching time the
+  wall-mediated reversal reaches 0.657 of the uniform bound (still descending), so the chain's result
+  carries over to a patch.
+
+### Fixed
+- The string method computed a chain's energy and forces whatever lattice it was given. Found by the
+  first patch run, which returned the saturated chain barrier for every patch size; a straight wall now
+  costs exactly its height times the chain barrier, as it must.
+
 ## [0.15.000] - 2026-09-18
 
 ### Fixed
