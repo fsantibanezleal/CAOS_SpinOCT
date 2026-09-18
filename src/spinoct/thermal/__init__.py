@@ -20,6 +20,7 @@ from .stabilize import (
 from .stochastic import (
     EnsembleResult,
     boltzmann_polar_variance,
+    sot_switching_success_rate,
     stochastic_llg_step,
     switching_success_rate,
 )
@@ -28,6 +29,7 @@ __all__ = [
     "BrFrontPoint",
     "EnsembleResult",
     "boltzmann_polar_variance",
+    "sot_switching_success_rate",
     "br_cost_reliability_front",
     "hyperbolic_fraction",
     "instability_penalty",
