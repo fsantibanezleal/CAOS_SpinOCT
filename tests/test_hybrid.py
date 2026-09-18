@@ -136,3 +136,51 @@ def test_a_cheaper_current_shifts_the_optimum_away_from_the_field() -> None:
         assert result.switched, f"the co-optimization did not reverse at a current price of {price}"
         shares.append(result.field_fraction)
     assert shares[0] < shares[1], f"a cheaper current did not shift cost onto the current: {shares}"
+
+
+# ------------------------------------------------------------------ the equation the integrator solves
+
+
+def test_the_integrator_solves_the_gilbert_form_it_states() -> None:
+    """The integrator must solve the equation in its docstring, the source's implicit Gilbert form.
+
+    ``s_dot = tau + alpha s x s_dot`` is linear in ``s_dot``, so it is solved exactly here by a 3x3
+    linear solve and compared with the explicit right-hand side at random points. The integrator once
+    used the couplings directly as explicit coefficients and was 2 to 22 per cent off.
+    """
+    from spinoct.control.hybrid import _sot_rhs
+
+    system = make_system()
+    gamma, alpha = system.gamma, system.alpha
+    e_z = np.array([0.0, 0.0, 1.0])
+
+    def skew(v: np.ndarray) -> np.ndarray:
+        return np.array([[0.0, -v[2], v[1]], [v[2], 0.0, -v[0]], [-v[1], v[0], 0.0]])
+
+    rng = np.random.default_rng(3)
+    for xi_f, xi_d in ((1.0, -0.1), (0.05, 0.05), (0.1, 1.0)):
+        for _ in range(10):
+            s = rng.normal(size=3)
+            s /= np.linalg.norm(s)
+            current = rng.normal(size=3)
+            current[2] = 0.0
+            b_total = system.internal_field(s) + 0.1 * rng.normal(size=3)
+            p = np.cross(current, e_z)
+            tau = (
+                -gamma * np.cross(s, b_total)
+                + gamma * xi_f * np.cross(s, p)
+                + gamma * xi_d * np.cross(s, np.cross(s, p))
+            )
+            exact = np.linalg.solve(np.eye(3) - alpha * skew(s), tau)
+            np.testing.assert_allclose(_sot_rhs(s, b_total, current, system, xi_f, xi_d), exact, rtol=1e-12)
+
+
+def test_the_source_sweet_spots_fall_out_of_the_conversion() -> None:
+    """At the ideal ratio the explicit damping-like term vanishes; at the forbidden ratio the field-like."""
+    from spinoct.dynamics.sot_torque import explicit_sot_coefficients
+
+    alpha = 0.1
+    _field_like, damping_like = explicit_sot_coefficients(1.0, -alpha * 1.0, alpha)
+    assert damping_like == pytest.approx(0.0, abs=1e-15)
+    field_like, _damping_like = explicit_sot_coefficients(alpha * 1.0, 1.0, alpha)
+    assert field_like == pytest.approx(0.0, abs=1e-15)
