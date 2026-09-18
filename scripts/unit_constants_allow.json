@@ -131,9 +131,9 @@
     "reason": "Dimensionless floor guarding a division by the objective scale when the free-macrospin cost underflows. A numerical guard, not a physical quantity.",
     "source": "self.objective_scale = max(objective_scale, 1e-300)"
   },
-  "src/spinoct/lattice/mep.py::0.02": {
-    "reason": "String-method step on the force expressed in units of the anisotropy energy per site; dimensionless, the images are unit vectors.",
-    "source": "_STEP = 0.02"
+  "src/spinoct/lattice/mep.py::0.84": {
+    "reason": "Dimensionless fraction of the explicit stability limit of the string-method step; the limit itself is step * (2 + 4 J / K) < 2 with the force in units of the anisotropy energy per site. A numerical safety factor, not a physical quantity.",
+    "source": "_STABILITY_FRACTION = 0.84"
   },
   "src/spinoct/lattice/mep.py::1e-06": {
     "reason": "Default force tolerance in units of the anisotropy energy per site; dimensionless.",
