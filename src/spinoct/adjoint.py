@@ -32,6 +32,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from .dynamics.sot_torque import explicit_sot_coefficients
 from .dynamics.system import MacrospinSystem
 
 __all__ = [
@@ -272,6 +273,8 @@ def _sot_f(
 ) -> np.ndarray:
     """The LLG right-hand side including spin-orbit torque, matching ``control.hybrid._sot_rhs``."""
     alpha, gamma = system.alpha, system.gamma
+    # The couplings arrive in the source's Gilbert form; the explicit equation needs them converted.
+    xi_f, xi_d = explicit_sot_coefficients(xi_f, xi_d, alpha)
     b_total = system.internal_field(s) + b_applied
     spin_hall = np.cross(current, _E_Z)
     rhs = (
@@ -303,6 +306,7 @@ def _sot_jacobians(
     and the field terms are the ones :func:`_f_jacobians` already returns.
     """
     alpha, gamma = system.alpha, system.gamma
+    xi_f, xi_d = explicit_sot_coefficients(xi_f, xi_d, alpha)
     df_ds, df_db = _f_jacobians(s, b_applied, system)
 
     spin_hall = np.cross(current, _E_Z)
