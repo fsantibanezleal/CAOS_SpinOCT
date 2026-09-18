@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
+from spinoct.adjoint import adjoint_gradient_sot
 from spinoct.control import HybridSolver, integrate_llg_sot
 from spinoct.dynamics import MacrospinSystem
 from spinoct.units import bohr_magnetons_to_j_per_t, mev_to_joules
@@ -73,3 +75,64 @@ def test_hybrid_reverses_using_both_field_and_current() -> None:
     assert result.field_cost > 0.0
     assert result.current_cost > 0.0
     assert 0.0 < result.field_fraction < 1.0
+
+
+def test_the_sot_adjoint_gradient_matches_finite_differences() -> None:
+    """Both controls at once: one backward pass must equal the finite-difference gradient.
+
+    The spin-orbit-torque terms add their own Jacobians to the adjoint recursion, and a sign error in
+    any of them would still produce a plausible-looking descent. The step is chosen relative to the
+    field scale: too small a step and the difference of two objectives of order 1e-11 is round-off, not
+    a derivative, which is how an earlier check of this appeared to fail at the 1e-3 level.
+    """
+    system = make_system()
+    switching_time = system.switching_time_from_tau0(4.0)
+    grid = np.linspace(0.0, switching_time, 120)
+    rng = np.random.default_rng(0)
+    field = rng.normal(scale=0.3 * system.anisotropy_field, size=(grid.size, 3))
+    current = rng.normal(scale=0.4, size=(grid.size, 3))
+    field[:, 2] = 0.0
+    current[:, 2] = 0.0
+    weight = 1e-11
+
+    def objective(f, j):
+        return adjoint_gradient_sot(f, j, grid, system, 0.05, 0.05, weight)[0]
+
+    _value, _sz, grad_field, grad_current = adjoint_gradient_sot(
+        field, current, grid, system, 0.05, 0.05, weight
+    )
+    for table, gradient in ((field, grad_field), (current, grad_current)):
+        step = 1e-4 * float(np.abs(table).max())
+        for index in ((5, 0), (40, 1), (90, 0)):
+            table[index] += step
+            plus = objective(field, current)
+            table[index] -= 2.0 * step
+            minus = objective(field, current)
+            table[index] += step
+            numerical = (plus - minus) / (2.0 * step)
+            assert abs(numerical - gradient[index]) <= 1e-5 * abs(numerical)
+
+
+@pytest.mark.slow
+def test_a_cheaper_current_shifts_the_optimum_away_from_the_field() -> None:
+    """The question the case exists to ask: where does the optimum sit as the price of current moves.
+
+    Measured 2026-09-17 at ten tau0: the share of the weighted cost carried by the field falls from
+    0.96 at a price of 0.1 to 0.03 at 1e-4, so the crossover is real and the sweep must reach it. The
+    test asserts the direction, which is what the physics guarantees, not the values.
+    """
+    system = make_system()
+    switching_time = system.switching_time_from_tau0(8.0)
+    shares = []
+    for price in (1e-3, 1e-1):
+        result = HybridSolver(
+            system,
+            switching_time,
+            circuit_field=1.0,
+            circuit_current=price,
+            n_harmonics=3,
+            integration_steps=300,
+        ).solve(max_iterations=200)
+        assert result.switched, f"the co-optimization did not reverse at a current price of {price}"
+        shares.append(result.field_fraction)
+    assert shares[0] < shares[1], f"a cheaper current did not shift cost onto the current: {shares}"
