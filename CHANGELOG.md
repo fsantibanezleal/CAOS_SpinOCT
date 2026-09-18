@@ -4,6 +4,24 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.15.000] - 2026-09-18
+
+### Fixed
+- **The minimum energy path did not converge for wide domain walls.** The string method takes a forward
+  step on the perpendicular force, and a fixed step of 0.02 (in units of the anisotropy energy per site)
+  crossed the explicit stability limit `step * (2 + 4 J / K) < 2` just above J / K = 24. The path
+  oscillated, hit the iteration cap and still returned a barrier: 1.5 times the continuum wall energy at
+  J / K = 25 and 43 times it at J / K = 40, with `converged = False` as the only signal. Ten times the
+  iterations did not help. The step now scales with the stiffness at 0.84 of the limit, which reproduces
+  the old step at J / K = 10, where every barrier Espira and manuscript M2 use was computed (all nine
+  recomputed: converged and identical).
+
+### Added
+- The continuum cross-check on theory page 12: the lattice barrier approaches the Bloch-wall energy
+  `2 sqrt(2 J K)` from below as the wall widens, 0.955 of it at J / K = 2 to 0.999 at 80, with the
+  deficit falling as `0.043 / w^2`, the leading discreteness correction. A test asserts convergence, the
+  limit, and the `w^-2` rate.
+
 ## [0.14.000] - 2026-09-18
 
 ### Fixed

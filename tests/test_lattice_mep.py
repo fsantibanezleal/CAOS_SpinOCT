@@ -82,3 +82,36 @@ def test_invalid_arguments_are_rejected() -> None:
         minimum_energy_path(chain(3, 1.0), n_images=2)
     with pytest.raises(ValueError):
         minimum_energy_path(chain(3, 1.0), initial="spiral")
+
+
+def test_wide_walls_converge_onto_the_continuum_wall_energy() -> None:
+    """The string method must converge for wide walls, and the barrier must approach 2 sqrt(2 J K).
+
+    A fixed explicit step crossed the stability limit just above J / K = 24; the path oscillated, hit the
+    iteration cap, and still returned a barrier 1.5 times the continuum value at J / K = 25 and 43 times it
+    at J / K = 40. The deficit below the continuum must also shrink like one over the wall width squared,
+    the leading discreteness correction, which is what an exact lattice result converging on a continuum
+    closed form looks like.
+    """
+    import math
+
+    from spinoct.lattice import SpinChain, minimum_energy_path
+    from spinoct.units import bohr_magnetons_to_j_per_t, mev_to_joules
+
+    mu, anisotropy = bohr_magnetons_to_j_per_t(3.0), mev_to_joules(0.15)
+    widths, deficits = [], []
+    for exchange_over_k in (10.0, 20.0, 40.0):
+        width_squared = exchange_over_k / 2.0
+        n_sites = max(24, int(12 * math.sqrt(width_squared)))
+        exchange = exchange_over_k * anisotropy
+        chain = SpinChain(n_sites=n_sites, mu=mu, anisotropy_j=anisotropy, exchange_j=exchange, alpha=0.1)
+        path = minimum_energy_path(chain, initial="wall")
+        assert path.converged, f"J/K = {exchange_over_k} did not converge"
+        continuum = 2.0 * math.sqrt(2.0 * exchange_over_k) * anisotropy
+        ratio = path.barrier / continuum
+        assert 0.99 < ratio < 1.0, f"J/K = {exchange_over_k}: barrier/continuum = {ratio}"
+        widths.append(width_squared)
+        deficits.append(1.0 - ratio)
+    # Deficit ~ c / w^2: the log-log slope over a factor of four in w^2 is -1 within ten per cent.
+    slope = math.log(deficits[-1] / deficits[0]) / math.log(widths[-1] / widths[0])
+    assert -1.1 < slope < -0.9, f"discreteness deficit scales as w^{2 * slope:.2f}, not w^-2"

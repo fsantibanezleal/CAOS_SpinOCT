@@ -49,8 +49,15 @@ from .chain import SpinChain
 
 __all__ = ["MinimumEnergyPath", "cost_floor_from_barrier", "minimum_energy_path"]
 
-#: Relative step on the dimensionless force (force in units of the anisotropy energy per site).
-_STEP = 0.02
+#: The step on the dimensionless force (in units of the anisotropy energy per site), as a fraction of
+#: the explicit stability limit. The stiffest mode of a chain has curvature about ``2 + 4 J / K`` in those
+#: units (anisotropy plus nearest-neighbour exchange), and a forward step is stable only while
+#: ``step * (2 + 4 J / K) < 2``. A fixed step of 0.02 crossed that limit just above J / K = 24: the path
+#: oscillated instead of converging, stopped at the iteration cap, and still returned a barrier, 1.5 times
+#: the continuum wall energy at J / K = 25 and 43 times it at J / K = 40. The step now scales with the
+#: stiffness. 0.84 of the limit reproduces the old step of 0.02 at J / K = 10, where every shipped
+#: barrier was computed, and the converged barrier is a fixed point independent of the step.
+_STABILITY_FRACTION = 0.84
 
 
 def _normalize(vectors: np.ndarray) -> np.ndarray:
@@ -171,6 +178,7 @@ def minimum_energy_path(
         raise ValueError("n_images must be at least 3")
     images = _initial_path(chain, n_images, initial)
     scale = chain.anisotropy_j
+    step = _STABILITY_FRACTION / (2.0 + 4.0 * abs(chain.exchange_j) / chain.anisotropy_j)
     converged = False
     iterations = 0
     climbing = False
@@ -194,7 +202,7 @@ def minimum_energy_path(
                 converged = True
                 break
             climbing = True
-        images = _normalize(images + _STEP * update)
+        images = _normalize(images + step * update)
         if climbing:
             saved = images[top].copy()
             images = _redistribute(images)
