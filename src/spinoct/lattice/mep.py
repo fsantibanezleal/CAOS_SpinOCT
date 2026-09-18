@@ -65,17 +65,15 @@ def _normalize(vectors: np.ndarray) -> np.ndarray:
 
 
 def _energies(chain: SpinChain, images: np.ndarray) -> np.ndarray:
-    anisotropy = -chain.anisotropy_j * np.sum(images[..., 2] ** 2, axis=-1)
-    exchange = -chain.exchange_j * np.sum(np.sum(images[:, :-1] * images[:, 1:], axis=-1), axis=-1)
-    return anisotropy + exchange
+    # From the lattice, not written here: an earlier version hard-coded the chain's two neighbours, so
+    # a flattened square patch was treated as one long snake of sites and every patch barrier came out
+    # as the saturated chain value.
+    return chain.energy_batched(images)
 
 
 def _forces(chain: SpinChain, images: np.ndarray) -> np.ndarray:
     """``-dE/ds`` projected onto each site's tangent plane, in J per unit vector."""
-    field = np.zeros_like(images)
-    field[..., 2] += 2.0 * chain.anisotropy_j * images[..., 2]
-    field[:, :-1] += chain.exchange_j * images[:, 1:]
-    field[:, 1:] += chain.exchange_j * images[:, :-1]
+    field = chain.minus_energy_gradient_batched(images)
     return field - np.sum(field * images, axis=-1, keepdims=True) * images
 
 
@@ -144,8 +142,10 @@ def _initial_path(chain: SpinChain, n_images: int, mode: str) -> np.ndarray:
         theta = np.repeat((np.pi * fractions)[:, None], n, axis=1)
     elif mode == "wall":
         width = max(1.0, float(np.sqrt(chain.exchange_j / (2.0 * chain.anisotropy_j))))
-        centre = -2.0 * width + (n - 1 + 4.0 * width) * fractions
-        progress = 0.5 * (1.0 + np.tanh((centre[:, None] - np.arange(n)[None, :]) / width))
+        extent = chain.wall_extent()
+        centre = -2.0 * width + (extent - 1 + 4.0 * width) * fractions
+        coordinate = chain.wall_coordinate()
+        progress = 0.5 * (1.0 + np.tanh((centre[:, None] - coordinate[None, :]) / width))
         progress = (progress - progress[0]) / (progress[-1] - progress[0])
         theta = np.pi * progress
     else:
@@ -178,7 +178,9 @@ def minimum_energy_path(
         raise ValueError("n_images must be at least 3")
     images = _initial_path(chain, n_images, initial)
     scale = chain.anisotropy_j
-    step = _STABILITY_FRACTION / (2.0 + 4.0 * abs(chain.exchange_j) / chain.anisotropy_j)
+    # The stiffest mode has curvature about 2 + 2 z J / K for coordination z (4 J / K on a chain, 8 J / K
+    # on a square patch), in units of the anisotropy energy per site.
+    step = _STABILITY_FRACTION / (2.0 + 2.0 * chain.coordination * abs(chain.exchange_j) / chain.anisotropy_j)
     converged = False
     iterations = 0
     climbing = False
