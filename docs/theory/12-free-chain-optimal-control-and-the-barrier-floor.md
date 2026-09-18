@@ -95,6 +95,34 @@ The MEP is found by the climbing-image string method (W. E, W. Ren, E. Vanden-Ei
 form used for magnetic systems (P. F. Bessarab, V. M. Uzdin, H. Jonsson, Comput. Phys. Commun. 196,
 335, 2015, https://doi.org/10.1016/j.cpc.2015.07.001).
 
+The iteration is a forward step on the perpendicular force, so it has an explicit stability limit. In
+units of the anisotropy energy per site the stiffest mode of a chain has curvature about `2 + 4 J / K`,
+and the step must satisfy `step * (2 + 4 J / K) < 2`. The step is set to 0.84 of that limit. A fixed step
+of 0.02, which the first version used, crossed it just above J / K = 24: the path oscillated, stopped at
+the iteration cap and still returned a barrier, 1.5 times the continuum wall energy at J / K = 25 and 43
+times it at J / K = 40, with `converged = False` as the only signal. At J / K = 10, where every barrier
+in the table below and in the product was computed, the two steps coincide, and the converged barrier is
+a fixed point that does not depend on the step.
+
+### The continuum limit
+
+For a wide wall the lattice barrier must approach the continuum Bloch-wall energy `2 sqrt(2 J K)`, and
+the deficit must shrink like one over the wall width squared, `w^2 = J / (2 K)` sites squared. Measured
+with the stability-scaled step:
+
+| J/K | w^2 | barrier / continuum | 1 - ratio |
+|---|---|---|---|
+| 2 | 1 | 0.95474 | 0.0453 |
+| 10 | 5 | 0.99135 | 0.0087 |
+| 20 | 10 | 0.99573 | 0.0043 |
+| 25 | 12.5 | 0.99660 | 0.0034 |
+| 40 | 20 | 0.99787 | 0.0021 |
+| 80 | 40 | 0.99893 | 0.0011 |
+
+`1 - ratio` is close to `0.043 / w^2` throughout: the leading discreteness correction, which is what an
+exact lattice result converging on a closed-form continuum limit looks like. This is the engine's
+continuum cross-check, against a closed form rather than against another code.
+
 ### Barriers, J/K = 10
 
 | N | barrier / K | barrier / (N K) |
