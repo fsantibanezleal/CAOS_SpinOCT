@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spinoct"
-version = "0.12.0"
+version = "0.13.0"
 description = "Optimal control paths and energy-efficient switching pulses for classical spin dynamics (Landau-Lifshitz-Gilbert)"
 readme = "README.md"
 license = { text = "MIT" }
@@ -42,6 +42,10 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+# The constrained solvers integrate the equation of motion in pure Python inside an optimization
+# loop, so the tests that check their CONVERGED answers take tens of seconds each. They run in CI
+# and can be skipped locally with `-m "not slow"`.
+markers = ["slow: converged solver runs, tens of seconds each"]
 
 [tool.ruff]
 line-length = 110
