@@ -109,3 +109,55 @@ class SpinChain:
         field = self.internal_field(spins)
         longitudinal = np.sum(field * spins, axis=-1, keepdims=True)
         return field - longitudinal * spins
+
+    # ------------------------------------------------------------------ the lattice interface
+    #
+    # The optimal-control solver and the string method need five things from a lattice, and nothing
+    # about its dimension: the internal field for a stack of configurations, a colouring whose classes
+    # have disjoint footprints, the footprint sum, a coordinate a wall travels along, and the
+    # coordination that sets the explicit stability limit. The chain keeps its original arithmetic.
+
+    @property
+    def coordination(self) -> int:
+        """The largest number of neighbours of a site: two on a chain."""
+        return 2
+
+    def internal_field_batched(self, spins: np.ndarray) -> np.ndarray:
+        """The internal field for a stack of configurations, shape ``(P, N, 3)``, T."""
+        out = np.zeros_like(spins)
+        out[..., 2] += 2.0 * self.anisotropy_j / self.mu * spins[..., 2]
+        coupling = self.exchange_j / self.mu
+        out[:, :-1, :] += coupling * spins[:, 1:, :]
+        out[:, 1:, :] += coupling * spins[:, :-1, :]
+        return out
+
+    def colors(self) -> np.ndarray:
+        """A colouring of the sites whose classes have disjoint closed neighbourhoods: ``i mod 3``."""
+        return np.arange(self.n_sites) % 3
+
+    def footprint_sum(self, per_site: np.ndarray) -> np.ndarray:
+        """Sum a per-site quantity over each site's closed neighbourhood, along the last axis."""
+        padded = np.pad(per_site, [(0, 0)] * (per_site.ndim - 1) + [(1, 1)])
+        return padded[..., :-2] + padded[..., 1:-1] + padded[..., 2:]
+
+    def wall_coordinate(self) -> np.ndarray:
+        """The coordinate a wall travels along, per site: the site index."""
+        return np.arange(self.n_sites, dtype=float)
+
+    def wall_extent(self) -> float:
+        """The length a wall crosses, in sites."""
+        return float(self.n_sites)
+
+    def energy_batched(self, spins: np.ndarray) -> np.ndarray:
+        """The energy of each configuration in a stack ``(P, N, 3)``, J, shape ``(P,)``."""
+        anisotropy = -self.anisotropy_j * np.sum(spins[..., 2] ** 2, axis=-1)
+        exchange = -self.exchange_j * np.sum(np.sum(spins[:, :-1] * spins[:, 1:], axis=-1), axis=-1)
+        return anisotropy + exchange
+
+    def minus_energy_gradient_batched(self, spins: np.ndarray) -> np.ndarray:
+        """``-dE/ds`` for a stack of configurations, J per unit vector, shape ``(P, N, 3)``."""
+        field = np.zeros_like(spins)
+        field[..., 2] += 2.0 * self.anisotropy_j * spins[..., 2]
+        field[:, :-1] += self.exchange_j * spins[:, 1:]
+        field[:, 1:] += self.exchange_j * spins[:, :-1]
+        return field
