@@ -37,6 +37,7 @@ from ..units import thermal_energy_j
 __all__ = [
     "EnsembleResult",
     "boltzmann_polar_variance",
+    "sot_switching_success_rate",
     "stochastic_llg_step",
     "switching_success_rate",
 ]
@@ -68,6 +69,21 @@ def thermal_field_scale(system: MacrospinSystem, temperature_k: float, dt: float
     return float(np.sqrt(numerator / (system.gamma * system.mu * dt)))
 
 
+def _sot_torque(
+    s: np.ndarray, current: np.ndarray, a_f: float, a_d: float, alpha: float, gamma: float
+) -> np.ndarray:
+    """The explicit spin-orbit torque for a batch of moments, shape ``(..., 3)``.
+
+    ``a_f`` and ``a_d`` are the EXPLICIT coefficients from
+    :func:`spinoct.dynamics.sot_torque.explicit_sot_coefficients`, so this matches the Gilbert-form
+    equation of the source, not a Landau form with the couplings substituted directly.
+    """
+    p = np.cross(current, np.array([0.0, 0.0, 1.0]))
+    field_like = np.cross(s, p)
+    damping_like = np.cross(s, field_like)
+    return gamma * (a_f * field_like + a_d * damping_like) / (1.0 + alpha**2)
+
+
 def stochastic_llg_step(
     s: np.ndarray,
     applied_field: np.ndarray,
@@ -75,6 +91,9 @@ def stochastic_llg_step(
     temperature_k: float,
     dt: float,
     rng: np.random.Generator,
+    current: np.ndarray | None = None,
+    xi_f: float = 0.0,
+    xi_d: float = 0.0,
 ) -> np.ndarray:
     """Advance a batch of moments one stochastic Heun step.
 
@@ -85,13 +104,23 @@ def stochastic_llg_step(
         temperature_k: temperature, K.
         dt: the time step, s.
         rng: the random generator, for reproducibility.
+        current: an optional in-plane spin-orbit-torque current, shape ``(3,)`` or ``(N, 3)``, in the
+            reduced units of the source (``xi j`` is a field, T).
+        xi_f: field-like coupling, in the source's Gilbert form.
+        xi_d: damping-like coupling, in the source's Gilbert form.
 
     Returns:
         The advanced, renormalized moments, shape ``(N, 3)``.
     """
+    from ..dynamics.sot_torque import explicit_sot_coefficients
+
     s = np.asarray(s, dtype=float)
     applied = np.broadcast_to(np.asarray(applied_field, dtype=float), s.shape)
     alpha, gamma = system.alpha, system.gamma
+    torque_current = None
+    if current is not None and (xi_f != 0.0 or xi_d != 0.0):
+        torque_current = np.broadcast_to(np.asarray(current, dtype=float), s.shape)
+        a_f, a_d = explicit_sot_coefficients(xi_f, xi_d, alpha)
 
     scale = thermal_field_scale(system, temperature_k, dt)
     noise = rng.normal(scale=scale, size=s.shape) if scale > 0.0 else np.zeros_like(s)
@@ -99,14 +128,30 @@ def stochastic_llg_step(
     def total_field(moment: np.ndarray) -> np.ndarray:
         return system.internal_field(moment) + applied + noise
 
+    def rhs(moment: np.ndarray) -> np.ndarray:
+        out = _deterministic_rhs(moment, total_field(moment), alpha, gamma)
+        if torque_current is not None:
+            out = out + _sot_torque(moment, torque_current, a_f, a_d, alpha, gamma)
+        return out
+
     # Heun predictor.
-    k1 = _deterministic_rhs(s, total_field(s), alpha, gamma)
+    k1 = rhs(s)
     predictor = s + dt * k1
     predictor = predictor / np.linalg.norm(predictor, axis=-1, keepdims=True)
     # Heun corrector, same noise sample (the Stratonovich convention).
-    k2 = _deterministic_rhs(predictor, total_field(predictor), alpha, gamma)
+    k2 = rhs(predictor)
     out = s + 0.5 * dt * (k1 + k2)
     return out / np.linalg.norm(out, axis=-1, keepdims=True)
+
+
+def _stability_factor(system: MacrospinSystem, temperature_k: float) -> float:
+    """``K / (k_B T)``, infinite at zero temperature rather than a division by zero.
+
+    Both ensembles run at zero temperature as the deterministic limit, and used to crash there.
+    """
+    if temperature_k <= 0.0:
+        return float("inf")
+    return system.thermal_stability_factor(temperature_k)
 
 
 def boltzmann_polar_variance(system: MacrospinSystem, temperature_k: float) -> float:
@@ -194,7 +239,63 @@ def switching_success_rate(
     return EnsembleResult(
         success_rate=rate,
         n_copies=n_copies,
-        thermal_stability_factor=system.thermal_stability_factor(temperature_k),
+        thermal_stability_factor=_stability_factor(system, temperature_k),
         final_sz_mean=float(np.mean(final_sz)),
         confidence95=half_width,
+    )
+
+
+def sot_switching_success_rate(
+    system: MacrospinSystem,
+    current: Callable[[float], np.ndarray],
+    duration: float,
+    temperature_k: float,
+    xi_f: float,
+    xi_d: float,
+    n_copies: int = 500,
+    n_steps: int = 2000,
+    threshold: float = 0.0,
+    seed: int = 0,
+) -> EnsembleResult:
+    """The switching success rate of a CURRENT pulse at temperature, over an ensemble.
+
+    The spin-orbit-torque counterpart of :func:`switching_success_rate`, with the same thermostat and
+    the same stochastic Heun scheme; the current enters through the source's Gilbert-form torques.
+
+    Args:
+        system: the macrospin.
+        current: the in-plane current as a function of time, shape ``(3,)``, reduced units.
+        duration: how long the current runs, s.
+        temperature_k: temperature, K.
+        xi_f: field-like coupling.
+        xi_d: damping-like coupling.
+        n_copies: the ensemble size.
+        n_steps: integration steps across the duration.
+        threshold: the final ``s_z`` below which a copy counts as switched. Zero, the hemisphere,
+            by default: a current pulse is judged by which basin it leaves the moment in.
+        seed: the random seed.
+
+    Returns:
+        The :class:`EnsembleResult`.
+    """
+    rng = np.random.default_rng(seed)
+    dt = duration / n_steps
+    times = np.linspace(0.0, duration, n_steps + 1)
+    s = np.tile(np.array([0.0, 0.0, 1.0]), (n_copies, 1))
+    table = np.stack([current(float(t)) for t in times])
+    zero_field = np.zeros(3)
+    for index in range(n_steps):
+        j_mid = 0.5 * (table[index] + table[index + 1])
+        s = stochastic_llg_step(
+            s, zero_field, system, temperature_k, dt, rng, current=j_mid, xi_f=xi_f, xi_d=xi_d
+        )
+    final_sz = s[:, 2]
+    rate = float(np.mean(final_sz < threshold))
+    variance = max(rate * (1.0 - rate), 1.0 / n_copies)
+    return EnsembleResult(
+        success_rate=rate,
+        n_copies=n_copies,
+        thermal_stability_factor=_stability_factor(system, temperature_k),
+        final_sz_mean=float(np.mean(final_sz)),
+        confidence95=1.96 * float(np.sqrt(variance / n_copies)),
     )

@@ -4,6 +4,35 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.14.000] - 2026-09-18
+
+### Fixed
+- **The spin-orbit-torque integrator solved a different equation from the one it cites.** The source
+  (Vlasov et al., Phys. Rev. B 105, 134404, Eq. 3) writes the torques inside the implicit Gilbert form
+  `s_dot = tau + alpha s x s_dot`; the integrator substituted the couplings directly into the explicit
+  form, which drops the `alpha s x tau` mixing of the two channels. Measured against a direct linear
+  solve of the implicit equation: 2 to 22 per cent off at alpha = 0.1, most where the damping-like
+  coupling dominates. The explicit coefficients are now `xi_F - alpha xi_D` (field-like) and
+  `xi_D + alpha xi_F` (damping-like), from `spinoct.dynamics.sot_torque.explicit_sot_coefficients`,
+  shared by the integrator, the hybrid solver, its adjoint and the stochastic ensemble; the source's
+  sweet spot falls out of it (at the ideal ratio the explicit damping-like term vanishes). A test
+  compares the integrator with the implicit equation to machine precision.
+- Both switching-success ensembles crashed at zero temperature (a division by the thermal energy). The
+  stability factor there is reported as infinite.
+
+### Added
+- `spinoct.analytic.sot.ChirpedRotatingCurrent` (rung R04): the source's simplified constant-amplitude,
+  linearly chirped rotating current (Eq. 15), with `resonant_frequency`, `characteristic_switching_time`
+  and `at_source_settings`.
+- `spinoct.thermal.sot_switching_success_rate` and an optional current in `stochastic_llg_step`: the
+  thermal ensemble for current pulses, same thermostat and Heun scheme as the field ensemble.
+- **A replication that does not reproduce.** The source reports switching probabilities of 0.89, 0.97
+  and about 1 at 0.17, 0.18 and 0.20 j0 for the chirped current at a stability factor of 60. This engine
+  gives 0.009, 0.043 and 0.22 at those amplitudes and 0.90 at 0.25 j0, the same curve shifted by about
+  1.4 in amplitude. Rotation sense, starting tilt, coupling convention, chirp tuning, thermal noise,
+  pulse length and a factor of two in the time unit were each checked and ruled out. The gap is
+  recorded on theory page 09 and pinned in `tests/test_sot_chirp.py`.
+
 ## [0.13.000] - 2026-09-17
 
 ### Changed
