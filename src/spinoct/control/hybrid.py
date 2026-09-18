@@ -35,6 +35,7 @@ import numpy as np
 
 from ..adjoint import adjoint_gradient_sot
 from ..dynamics.llg import switching_cost
+from ..dynamics.sot_torque import explicit_sot_coefficients
 from ..dynamics.system import MacrospinSystem
 from .linear_basis import harmonic_design
 
@@ -59,8 +60,13 @@ def _sot_rhs(
     xi_f: float,
     xi_d: float,
 ) -> np.ndarray:
-    """The LLG right-hand side including spin-orbit torque, for one moment."""
+    """The LLG right-hand side including spin-orbit torque, for one moment.
+
+    Solves the Gilbert-form equation stated in the module docstring, with the SOT couplings converted
+    by :func:`explicit_sot_coefficients`.
+    """
     alpha, gamma = system.alpha, system.gamma
+    a_f, a_d = explicit_sot_coefficients(xi_f, xi_d, alpha)
     spin_hall = np.cross(current, _E_Z)  # the current-induced effective axis, in-plane current x z
     precession = np.cross(s, b_total)
     damping = np.cross(s, precession)
@@ -69,8 +75,8 @@ def _sot_rhs(
     rhs = (
         -gamma * precession
         - alpha * gamma * damping
-        + gamma * xi_f * field_like
-        + gamma * xi_d * damping_like
+        + gamma * a_f * field_like
+        + gamma * a_d * damping_like
     )
     return rhs / (1.0 + alpha**2)
 

@@ -27,6 +27,10 @@
     "reason": "Dimensionless numerical floor added to a standard deviation before dividing, to guard against a degenerate zero-variance feature or target during normalization. Not a physical quantity.",
     "source": "input_std = features.std(0) + 1e-12 (and target_std)"
   },
+  "src/spinoct/analytic/sot.py::1.4": {
+    "reason": "Dimensionless multiple of the resonant frequency at which the source starts its chirped current (Vlasov et al., PRB 105, 134404, after Eq. 15). A ratio of two frequencies, not a physical quantity with units.",
+    "source": "f_max_over_f_r: float = 1.4"
+  },
   "src/spinoct/analytic/sot.py::1e-09": {
     "reason": "Dimensionless relative tolerance in math.isclose, comparing tan(beta) against alpha (both dimensionless) to detect the forbidden SOT ratio. Not a physical quantity.",
     "source": "return math.isclose(math.tan(self.beta), self.system.alpha, rel_tol=1e-9, abs_tol=1e-12)"
