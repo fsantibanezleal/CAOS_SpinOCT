@@ -34,7 +34,12 @@ import numpy as np
 
 from .dynamics.system import MacrospinSystem
 
-__all__ = ["AdjointResult", "adjoint_gradient", "optimize_pulse_adjoint"]
+__all__ = [
+    "AdjointResult",
+    "adjoint_gradient",
+    "adjoint_gradient_sot",
+    "optimize_pulse_adjoint",
+]
 
 
 def _cross_matrix(v: np.ndarray) -> np.ndarray:
@@ -249,3 +254,158 @@ def optimize_pulse_adjoint(
         objective=objective,
         iterations=int(result.nit),
     )
+
+
+# ---------------------------------------------------------------- the spin-orbit-torque extension
+
+#: The current-induced effective axis is the in-plane current crossed with the film normal.
+_E_Z = np.array([0.0, 0.0, 1.0])
+
+
+def _sot_f(
+    s: np.ndarray,
+    b_applied: np.ndarray,
+    current: np.ndarray,
+    system: MacrospinSystem,
+    xi_f: float,
+    xi_d: float,
+) -> np.ndarray:
+    """The LLG right-hand side including spin-orbit torque, matching ``control.hybrid._sot_rhs``."""
+    alpha, gamma = system.alpha, system.gamma
+    b_total = system.internal_field(s) + b_applied
+    spin_hall = np.cross(current, _E_Z)
+    rhs = (
+        -gamma * np.cross(s, b_total)
+        - alpha * gamma * np.cross(s, np.cross(s, b_total))
+        + gamma * xi_f * np.cross(s, spin_hall)
+        + gamma * xi_d * np.cross(s, np.cross(s, spin_hall))
+    )
+    return rhs / (1.0 + alpha**2)
+
+
+def _sot_jacobians(
+    s: np.ndarray,
+    b_applied: np.ndarray,
+    current: np.ndarray,
+    system: MacrospinSystem,
+    xi_f: float,
+    xi_d: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """``(df/ds, df/db, df/dj)`` at a point, each 3x3.
+
+    Every term is a cross product, so every derivative is a product of skew matrices. Writing
+    ``[v]`` for the skew matrix of ``v`` and ``p = j x z`` for the current-induced axis:
+
+        d(s x p)/ds = -[p],              d(s x p)/dp = [s]
+        d(s x (s x p))/ds = -[s][p] - [s x p],   d(s x (s x p))/dp = [s][s]
+        dp/dj = -[z]
+
+    and the field terms are the ones :func:`_f_jacobians` already returns.
+    """
+    alpha, gamma = system.alpha, system.gamma
+    df_ds, df_db = _f_jacobians(s, b_applied, system)
+
+    spin_hall = np.cross(current, _E_Z)
+    skew_s = _cross_matrix(s)
+    skew_p = _cross_matrix(spin_hall)
+    skew_sp = _cross_matrix(np.cross(s, spin_hall))
+
+    scale = gamma / (1.0 + alpha**2)
+    df_ds = df_ds + scale * (xi_f * (-skew_p) + xi_d * (-skew_s @ skew_p - skew_sp))
+    # dp/dj = -[z] because p = j x z = -(z x j).
+    dp_dj = -_cross_matrix(_E_Z)
+    df_dj = scale * (xi_f * skew_s + xi_d * (skew_s @ skew_s)) @ dp_dj
+    return df_ds, df_db, df_dj
+
+
+def _sot_forward(
+    field: np.ndarray,
+    current: np.ndarray,
+    times: np.ndarray,
+    system: MacrospinSystem,
+    xi_f: float,
+    xi_d: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Forward integration of the SOT dynamics; returns the trajectory and pre-normalization vectors."""
+    n = times.size
+    s = np.array([0.0, 0.0, 1.0])
+    trajectory = np.empty((n, 3))
+    pre_norm = np.empty((n, 3))
+    trajectory[0] = s
+    pre_norm[0] = s
+    for k in range(n - 1):
+        dt = times[k + 1] - times[k]
+        r = s + dt * _sot_f(s, field[k], current[k], system, xi_f, xi_d)
+        pre_norm[k + 1] = r
+        s = r / np.linalg.norm(r)
+        trajectory[k + 1] = s
+    return trajectory, pre_norm
+
+
+def adjoint_gradient_sot(
+    field: np.ndarray,
+    current: np.ndarray,
+    times: np.ndarray,
+    system: MacrospinSystem,
+    xi_f: float,
+    xi_d: float,
+    fidelity_weight: float,
+    field_weight: float = 1.0,
+    current_weight: float = 1.0,
+) -> tuple[float, float, np.ndarray, np.ndarray]:
+    """The two-term objective and its exact gradient with respect to BOTH controls.
+
+    The hybrid problem prices a field against a current:
+
+        C = C_b integral |b|^2 dt + C_j integral |j|^2 dt + lambda (1 + s_z(T)) / 2
+
+    and the question it exists to answer is where the optimum sits as the relative price moves. One
+    backward pass gives the gradient with respect to every sample of both controls at once.
+
+    Args:
+        field: the applied field per step, shape ``(N, 3)``, T.
+        current: the in-plane current per step, shape ``(N, 3)``, reduced units.
+        times: the grid, s, shape ``(N,)``.
+        system: the macrospin.
+        xi_f: field-like spin-orbit-torque coupling.
+        xi_d: damping-like spin-orbit-torque coupling.
+        fidelity_weight: the penalty weight on ``(1 + s_z(T)) / 2``.
+        field_weight: the field-cost weight ``C_b``.
+        current_weight: the current-cost weight ``C_j``.
+
+    Returns:
+        ``(objective, final_sz, grad_field, grad_current)``, the gradients of shape ``(N, 3)``.
+    """
+    n = times.size
+    trajectory, pre_norm = _sot_forward(field, current, times, system, xi_f, xi_d)
+    final_sz = float(trajectory[-1, 2])
+
+    steps = np.diff(times)
+    field_cost = float(np.sum(np.sum(field[:-1] ** 2, axis=1) * steps))
+    current_cost = float(np.sum(np.sum(current[:-1] ** 2, axis=1) * steps))
+    objective = (
+        field_weight * field_cost
+        + current_weight * current_cost
+        + fidelity_weight * 0.5 * (1.0 + final_sz)
+    )
+
+    grad_field = np.zeros_like(field)
+    grad_current = np.zeros_like(current)
+    g = np.array([0.0, 0.0, 0.5 * fidelity_weight])
+
+    for k in range(n - 2, -1, -1):
+        dt = times[k + 1] - times[k]
+        r = pre_norm[k + 1]
+        norm = np.linalg.norm(r)
+        s_next = r / norm
+        d_normalize = (np.eye(3) - np.outer(s_next, s_next)) / norm
+        g_r = d_normalize.T @ g
+
+        df_ds, df_db, df_dj = _sot_jacobians(
+            trajectory[k], field[k], current[k], system, xi_f, xi_d
+        )
+        grad_field[k] += 2.0 * field_weight * field[k] * dt + dt * (df_db.T @ g_r)
+        grad_current[k] += 2.0 * current_weight * current[k] * dt + dt * (df_dj.T @ g_r)
+        g = (np.eye(3) + dt * df_ds).T @ g_r
+
+    return objective, final_sz, grad_field, grad_current

@@ -47,6 +47,10 @@
     "reason": "Dimensionless fraction of pi. The default constant-field polar angle is 3 pi / 4 (0.75 * pi), a geometric choice placing the field in the reversing hemisphere off the easy axis. An angle in radians, not a physical observable.",
     "source": "polar_angle: float = 0.75 * np.pi"
   },
+  "src/spinoct/control/constrained.py::0.001": {
+    "reason": "Dimensionless reversal threshold on the infidelity (1 + s_z(T)) / 2, so s_z(T) <= -0.998. A declared criterion for calling a pulse a reversal, not a physical quantity.",
+    "source": "_SWITCHED_INFIDELITY = 1e-3"
+  },
   "src/spinoct/control/constrained.py::0.1": {
     "reason": "Dimensionless. The CRAB base frequencies are nudged by +-10 percent (the chopped random basis). A relative perturbation of a frequency, carries no unit of its own.",
     "source": "frequencies = base * (1.0 + 0.1 * rng.uniform(-1.0, 1.0, size=self.n_harmonics))"
@@ -71,21 +75,57 @@
     "reason": "Dimensionless penalty weight. The reversal-infidelity penalty is 50x the free-macrospin cost, chosen so the penalty and the cost are the same order of magnitude for any material and switching time. Multiplies a cost scale; the weight itself is unitless.",
     "source": "self.fidelity_weight = fidelity_weight if fidelity_weight is not None else 50.0 * free"
   },
+  "src/spinoct/control/hybrid.py::0.001": {
+    "reason": "Dimensionless reversal threshold on the infidelity, so s_z(T) <= -0.998. A declared criterion.",
+    "source": "_SWITCHED_INFIDELITY = 1e-3"
+  },
   "src/spinoct/control/hybrid.py::0.05": {
     "reason": "Dimensionless default SOT coupling (field-like and damping-like). A reduced-unit material coupling in the SOT term, not a physical field or energy; real runs pass explicit values.",
     "source": "xi_f: float = 0.05,  (and xi_d)"
+  },
+  "src/spinoct/control/hybrid.py::1e-05": {
+    "reason": "Dimensionless target infidelity for the hybrid penalty continuation, the same criterion the constrained solvers use.",
+    "source": "_TARGET_INFIDELITY = 1e-5"
   },
   "src/spinoct/control/hybrid.py::1e-09": {
     "reason": "Dimensionless Nelder-Mead xatol optimizer tolerance. An algorithm setting.",
     "source": "options={..., 'xatol': 1e-9, 'fatol': 1e-30}"
   },
+  "src/spinoct/control/hybrid.py::1e-12": {
+    "reason": "Dimensionless L-BFGS-B gtol on the non-dimensionalized projected gradient. An optimizer setting.",
+    "source": "options={'maxiter': max_iterations, 'ftol': 1e-14, 'gtol': 1e-12}"
+  },
+  "src/spinoct/control/hybrid.py::1e-14": {
+    "reason": "Dimensionless L-BFGS-B ftol on the non-dimensionalized objective. An optimizer setting.",
+    "source": "options={'maxiter': max_iterations, 'ftol': 1e-14, 'gtol': 1e-12}"
+  },
   "src/spinoct/control/hybrid.py::1e-30": {
     "reason": "Dimensionless Nelder-Mead fatol optimizer tolerance, set small so the iteration cap governs termination.",
     "source": "options={..., 'xatol': 1e-9, 'fatol': 1e-30}"
   },
+  "src/spinoct/control/hybrid.py::1e-300": {
+    "reason": "Dimensionless floor guarding a division by the weighted-cost scale when it underflows. A numerical guard.",
+    "source": "scale = max(self.circuit_field * self._free, 1e-300)"
+  },
   "src/spinoct/control/hybrid.py::50.0": {
     "reason": "Dimensionless penalty weight on the reversal infidelity, scaled by the free-macrospin cost so the penalty and the two-term cost are the same order of magnitude. A weight multiplying a cost scale, unitless.",
     "source": "return weighted + 50.0 * self._free * infidelity"
+  },
+  "src/spinoct/control/linear_basis.py::1e-05": {
+    "reason": "Dimensionless target infidelity the penalty continuation drives to, chosen so the reported cost cannot fall below the analytic optimum on an incomplete reversal. A convergence criterion.",
+    "source": "_TARGET_INFIDELITY = 1e-5"
+  },
+  "src/spinoct/control/linear_basis.py::1e-12": {
+    "reason": "Dimensionless L-BFGS-B gtol on the non-dimensionalized projected gradient. An optimizer setting.",
+    "source": "_GTOL = 1e-12"
+  },
+  "src/spinoct/control/linear_basis.py::1e-14": {
+    "reason": "Dimensionless L-BFGS-B ftol on the non-dimensionalized, order-1 objective. An optimizer setting.",
+    "source": "_FTOL = 1e-14"
+  },
+  "src/spinoct/control/linear_basis.py::1e-300": {
+    "reason": "Dimensionless floor guarding a division by the objective scale when the free-macrospin cost underflows. A numerical guard, not a physical quantity.",
+    "source": "self.objective_scale = max(objective_scale, 1e-300)"
   },
   "src/spinoct/lattice/mep.py::0.02": {
     "reason": "String-method step on the force expressed in units of the anisotropy energy per site; dimensionless, the images are unit vectors.",

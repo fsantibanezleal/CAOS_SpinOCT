@@ -34,9 +34,12 @@ object, never a buried constant.
 ## Status
 
 Pre-1.0, under active development. The analytic uniaxial optimal control path, its closed-form pulse
-and cost, and the negative-parameter Jacobi elliptic machinery it needs are complete and validated.
-The numerical image-based solver, the GRAPE and CRAB constrained solvers, and the batched GPU lane
-are in progress.
+and cost, and the negative-parameter Jacobi elliptic machinery it needs are complete and validated, as
+are the numerical image-based solver and the constrained solvers. GRAPE, CRAB and the field-plus-current
+hybrid are driven by the exact adjoint gradient through their linear control bases, and each answer is
+required to be a real reversal before its cost is reported; see
+`docs/theory/13-constrained-control-and-the-price-of-realizability.md` for what they measure and for the
+two defects that shipped before they did. The batched GPU lane is in progress.
 
 ## License
 
