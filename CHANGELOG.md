@@ -4,6 +4,27 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.17.000] - 2026-09-22
+
+### Added
+- `spinoct.lattice.recommended_images`: how many images a minimum energy path needs to resolve the wall
+  as it travels, about three per wall width, odd, between 33 and 257. The reaction coordinate of a wall
+  reversal is the wall's position, so a path whose images are further apart than the wall itself cannot
+  follow it: the climbing image hops between lattice positions instead of settling on the saddle.
+  Measured on a 32 x 32 patch at J / K = 2.5, whose wall is 1.12 sites wide and travels 32 sites: at the
+  old fixed 33 images (0.9 per wall width) the force criterion was never met in 200,000 iterations
+  (23 minutes) and the barrier wandered by about one part in a thousand; at 65 images it still was not;
+  at the recommended 87 the same path converges in 1,185 iterations and 30 seconds, and agrees with a
+  97-image path to seven digits (0.13460306 against 0.13460297 of N K).
+
+### Changed
+- CI runs the test suite on one Python version, the declared floor (ADR-0074 rule 3), with the wheel
+  smoke still on 3.12.
+
+### Notes
+- `minimum_energy_path` keeps its default of 33 images, so no existing result moves silently; callers
+  that sweep lattice sizes should pass `recommended_images(lattice)`.
+
 ## [0.16.000] - 2026-09-18
 
 ### Added
