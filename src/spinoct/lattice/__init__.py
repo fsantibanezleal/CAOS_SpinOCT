@@ -18,7 +18,12 @@ layers:
 from __future__ import annotations
 
 from .chain import SpinChain
-from .mep import MinimumEnergyPath, cost_floor_from_barrier, minimum_energy_path
+from .mep import (
+    MinimumEnergyPath,
+    cost_floor_from_barrier,
+    minimum_energy_path,
+    recommended_images,
+)
 from .ocp import LatticeOCPResult, LatticeOCPSolver
 from .patch import SpinPatch
 from .reversal import ReversalComparison, compare_reversal_modes, domain_wall_cost, uniform_cost
@@ -34,5 +39,6 @@ __all__ = [
     "cost_floor_from_barrier",
     "domain_wall_cost",
     "minimum_energy_path",
+    "recommended_images",
     "uniform_cost",
 ]
