@@ -118,3 +118,27 @@ def test_a_small_patch_reverses_uniformly_at_the_uniform_bound() -> None:
     result = solver.solve(initial="uniform", seed=0, noise=0.0, max_iterations=300)
     assert result.cost / solver.uniform_bound() == pytest.approx(1.0, abs=1e-6)
     assert result.nonuniformity < 1e-3
+
+
+def test_a_narrow_wall_on_a_wide_patch_needs_a_resolved_path() -> None:
+    """The path has to resolve the wall as it travels, or the climbing image never settles.
+
+    Measured on the 32 x 32 patch at J / K = 2.5, whose wall is 1.12 sites wide and travels 32 sites:
+    at the old fixed 33 images the force criterion is never met (200,000 iterations, 23 minutes, the
+    barrier wandering by about one part in a thousand), while the recommended count converges in about
+    a thousand iterations. Only the small case runs here; the 32 x 32 measurement is in the docstring of
+    ``recommended_images`` and in the product's C21.
+    """
+    from spinoct.lattice import recommended_images
+
+    narrow = SpinPatch(width=16, height=16, mu=MU, anisotropy_j=K, exchange_j=2.5 * K, alpha=0.5)
+    images = recommended_images(narrow)
+    assert images > 33, "a wall narrower than the image spacing must ask for more images"
+    assert images % 2 == 1
+    path = minimum_energy_path(narrow, n_images=images, initial="wall", max_iterations=40000)
+    assert path.converged
+    # The barrier is a property of the lattice, not of the path's resolution: the coarser path either
+    # converges to the same value or does not converge at all, and must never disagree while claiming to.
+    coarse = minimum_energy_path(narrow, n_images=33, initial="wall", max_iterations=40000)
+    if coarse.converged:
+        assert coarse.barrier == pytest.approx(path.barrier, rel=1e-3)

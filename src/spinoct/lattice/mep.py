@@ -47,7 +47,7 @@ import numpy as np
 
 from .chain import SpinChain
 
-__all__ = ["MinimumEnergyPath", "cost_floor_from_barrier", "minimum_energy_path"]
+__all__ = ["MinimumEnergyPath", "cost_floor_from_barrier", "minimum_energy_path", "recommended_images"]
 
 #: The step on the dimensionless force (in units of the anisotropy energy per site), as a fraction of
 #: the explicit stability limit. The stiffest mode of a chain has curvature about ``2 + 4 J / K`` in those
@@ -133,6 +133,34 @@ class MinimumEnergyPath:
     def barrier_over_uniform(self, chain: SpinChain) -> float:
         """``barrier / (N K)``: the MEP barrier relative to the uniform-rotation barrier."""
         return self.barrier / (chain.n_sites * chain.anisotropy_j)
+
+
+#: Images per wall width along the path. The reaction coordinate of a wall reversal is the wall's
+#: position, so the path has to resolve the wall as it travels: with fewer than about two images per
+#: wall width, neighbouring images differ by more than the wall itself and the climbing image hops
+#: between lattice positions instead of settling on the saddle. Measured on a 32 x 32 patch at
+#: J / K = 2.5 (a wall 1.12 sites wide travelling 32 sites): at 33 images (0.9 per wall width) and at 65
+#: (1.8) the force criterion is never met, the climbing image wanders and the barrier oscillates by about
+#: one part in a thousand; at 97 (3.4) the same path converges in 1,025 iterations, 33 seconds.
+_IMAGES_PER_WALL_WIDTH = 3.0
+_MIN_IMAGES = 33
+_MAX_IMAGES = 257
+
+
+def recommended_images(chain: SpinChain) -> int:
+    """How many images the path needs to resolve this lattice's wall as it travels.
+
+    Args:
+        chain: the lattice (a chain or a patch).
+
+    Returns:
+        An odd image count, at least 33 and at most 257, giving about three images per wall width over
+        the distance the wall travels. Odd so that a symmetric path keeps an image at the midpoint.
+    """
+    width = max(1.0, float(np.sqrt(chain.exchange_j / (2.0 * chain.anisotropy_j))))
+    needed = int(np.ceil(_IMAGES_PER_WALL_WIDTH * chain.wall_extent() / width)) + 1
+    bounded = int(np.clip(needed, _MIN_IMAGES, _MAX_IMAGES))
+    return bounded + 1 if bounded % 2 == 0 else bounded
 
 
 def _initial_path(chain: SpinChain, n_images: int, mode: str) -> np.ndarray:
