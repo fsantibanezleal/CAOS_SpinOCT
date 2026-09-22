@@ -4,6 +4,25 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.18.000] - 2026-09-22
+
+### Fixed
+- **The longitudinal stabilizing field was applied with the wrong sign**, so the module's own analysis
+  and its simulation contradicted each other. `perturbation_eigenvalues` calls a positive `B_r`
+  stabilizing, and at one anisotropy field `hyperbolic_fraction` duly reported the instability gone,
+  while `br_cost_reliability_front` added that field along the nominal moment and made switching LESS
+  reliable. Measured on a 3 Bohr-magneton, 0.15 meV macrospin at a stability factor of one and
+  alpha = 0.01: the success rate went from 0.780 without the field down to 0.530 with it, and now rises
+  to 0.958. Two trajectories integrated side by side separate by a factor of 8.8 over the pulse under
+  the old sign, 2.9 with no longitudinal field at all, and 1.2 under the corrected one.
+- A test now holds the two together: the field the eigenvalues call stabilizing must raise the measured
+  success rate, beyond its own confidence interval.
+
+### Notes
+- Every reliability front computed before this version understates what the longitudinal field buys.
+  Espira's `novel.json` and case C09 are rebaked on 0.18.000, and manuscript M1, which reads that front,
+  needs a revision.
+
 ## [0.17.000] - 2026-09-22
 
 ### Added

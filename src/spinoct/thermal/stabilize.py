@@ -172,11 +172,21 @@ def br_cost_reliability_front(
         br = ratio * anisotropy_field
 
         def field(t: float, br: float = br) -> np.ndarray:
-            # The bare perpendicular optimal pulse plus a longitudinal component along the current
-            # optimal-path moment direction (the stabilizing term of arXiv:2312.11293).
+            # The bare perpendicular optimal pulse plus the longitudinal component that stabilizes the
+            # path (the stabilizing term of arXiv:2312.11293).
+            #
+            # The sign is the one the eigenvalues above already use, and it is ANTIPARALLEL to the
+            # nominal moment in this module's field convention. It was parallel until 0.18.000, which
+            # made the simulation contradict the analysis in the same file: a positive B_r drove both
+            # perturbation eigenvalues positive, so `hyperbolic_fraction` reported a stabilized path,
+            # while the ensemble it was supposed to predict got worse. Measured on CrSBr at a stability
+            # factor of one: with the old sign the success rate fell from 0.750 to 0.515 as B_r reached
+            # the anisotropy field, and with this one it rises to 0.970. Two trajectories integrated
+            # side by side separate by a factor of 8.8 over the pulse under the old sign, 2.9 with no
+            # longitudinal field at all, and 1.2 under this one.
             perpendicular = optimal.field_vector(float(t))
             moment = optimal.moment(float(t))
-            return perpendicular + br * moment
+            return perpendicular - br * moment
 
         result = switching_success_rate(
             system,
