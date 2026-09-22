@@ -142,3 +142,30 @@ def test_longitudinal_field_front_improves_reliability_at_a_cost() -> None:
     assert bare.added_cost == 0.0
     assert strong.added_cost > mid.added_cost > 0.0
     assert strong.added_cost == pytest.approx(4.0 * mid.added_cost, rel=1e-9)
+
+def test_the_analysis_and_the_ensemble_agree_on_which_field_stabilises() -> None:
+    """The eigenvalues and the simulation in this module must mean the same thing by B_r.
+
+    `perturbation_eigenvalues` calls a positive B_r stabilizing, so the ensemble has to measure a
+    HIGHER success rate there. Until 0.18.000 the front added the longitudinal component with the
+    opposite sign, so the two contradicted each other: `hyperbolic_fraction` reported a fully stable
+    path while the ensemble it was meant to predict got worse. Measured at a stability factor of one
+    and alpha = 0.01, the old sign took the success rate from 0.780 down to 0.530 and this one takes
+    it up to 0.958.
+    """
+    system = make_system(alpha=0.01)
+    switching_time = system.switching_time_from_tau0(10.0)
+    front = br_cost_reliability_front(
+        system,
+        switching_time,
+        temperature_for_stability(system, 1.0),
+        br_over_anisotropy=(0.0, 1.0),
+        n_copies=400,
+        n_steps=600,
+    )
+    bare, stabilised = front
+    assert bare.hyperbolic_fraction > 0.2, "the bare path has an instability to remove"
+    # At exactly one anisotropy field an eigenvalue touches zero at theta = pi/2, so a sample or
+    # two sit on the boundary; the instability itself is gone.
+    assert stabilised.hyperbolic_fraction < 0.01, "and the analysis says this field removes it"
+    assert stabilised.success_rate > bare.success_rate + bare.confidence95, "so the ensemble must agree"
