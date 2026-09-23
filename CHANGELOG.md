@@ -21,8 +21,16 @@ display form `X.XX.XXX`; the PyPI/semver form drops the padding.
   would hide the rows that did not make it.
 - Accepted against both lanes that already have a gate: the closed-form uniaxial cost, and the CPU
   solver problem by problem on biaxial systems, where the worst deviation over a 72-problem sweep was
-  8.5e-07. `docs/theory/14-the-batched-lane.md` has the method, the acceptance and the measured
-  crossover; torch stays optional and CI does not install it.
+  8.5e-07. torch stays optional and CI does not install it.
+- **Measured, and it does not flatter the GPU.** Batching 72 problems instead of solving them one at a
+  time is 3.7x faster on the CPU alone. The device only pays on large batches: at equal iteration
+  counts the CPU is faster up to about a quarter of a million image degrees of freedom (1.6 s against
+  3.7 s at 72 problems of 60 images), the crossover is around 1,152 problems of 240 images, and past it
+  CUDA wins by 1.6x in float64 and 1.9x in float32. Each iteration is a few dozen small kernels, so
+  launch latency, not arithmetic, is what a small batch pays. The largest configuration tried,
+  4,608 x 240 in float64, did not finish: L-BFGS keeps fifty history vectors of a 27 MB chain, and the
+  card ran out of its 8 GB. `docs/theory/14-the-batched-lane.md` has the table and the rule that
+  follows from it: use the batch lane always, the device only when the batch is large.
 
 ### Fixed
 - **`UniaxialOptimalControl` gained `peak_amplitude()`, because the obvious way to get the peak is
