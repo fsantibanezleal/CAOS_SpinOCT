@@ -39,7 +39,10 @@ are the numerical image-based solver and the constrained solvers. GRAPE, CRAB an
 hybrid are driven by the exact adjoint gradient through their linear control bases, and each answer is
 required to be a real reversal before its cost is reported; see
 `docs/theory/13-constrained-control-and-the-price-of-realizability.md` for what they measure and for the
-two defects that shipped before they did. The batched GPU lane is in progress.
+two defects that shipped before they did. The batched lane (`spinoct[torch]`) solves many
+independent optimal control problems as one tensor, on a GPU when one is present, and is accepted
+against the CPU lane problem by problem; `docs/theory/14-the-batched-lane.md` has what it is for,
+what it is not for, and where the crossover actually is.
 
 ## License
 
