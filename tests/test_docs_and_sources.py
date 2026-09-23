@@ -23,6 +23,9 @@ def test_display_version_is_consistent_everywhere() -> None:
     pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
     semver = ".".join(str(int(part)) for part in version_file.split("."))
     assert f'version = "{semver}"' in pyproject
+    # `spinoct.__version__` is what a dependant reads at runtime, and it had drifted three releases
+    # behind the manifest (0.16.0 while the package shipped 0.18.0) because nothing checked it.
+    assert spinoct.__version__ == semver
 
 
 def test_every_theory_doc_cites_a_real_doi() -> None:
