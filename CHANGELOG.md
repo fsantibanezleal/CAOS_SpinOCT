@@ -4,6 +4,48 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.19.000] - 2026-09-22
+
+### Added
+- **A batched lane**: `spinoct.numeric.BatchImageOCPSolver` solves many independent optimal control
+  problems as one tensor, on a GPU when there is one, behind the optional `spinoct[torch]` extra. One
+  optimal control path is a small problem and a GPU does nothing for it; what the sweeps in front of
+  this package do is solve hundreds of them that differ only in their parameters, and that is the shape
+  the lane is for. The systems in a batch may differ in every parameter, and `solve_best` sweeps seeds
+  as more rows of the same tensor.
+- The batched gradient is exact (automatic differentiation) rather than the CPU lane's local finite
+  difference; the two agree to 4.6e-06 of the gradient scale, which is that difference's own floor.
+- Convergence is reported **per problem**, against a residual measured on the CPU lane's own paths
+  rather than chosen: the reference's converged solves sit between 3.7e-06 and 5.5e-05, a stalled one
+  at 2.2e-03, so the threshold is 1e-4. A batch is minimized jointly and a single verdict for all of it
+  would hide the rows that did not make it.
+- Accepted against both lanes that already have a gate: the closed-form uniaxial cost, and the CPU
+  solver problem by problem on biaxial systems, where the worst deviation over a 72-problem sweep was
+  8.5e-07. torch stays optional and CI does not install it.
+- **Measured, and it does not flatter the GPU.** Batching 72 problems instead of solving them one at a
+  time is 3.7x faster on the CPU alone. The device only pays on large batches: at equal iteration
+  counts the CPU is faster up to about a quarter of a million image degrees of freedom (1.6 s against
+  3.7 s at 72 problems of 60 images), the crossover is around 1,152 problems of 240 images, and past it
+  CUDA wins by 1.6x in float64 and 1.9x in float32. Each iteration is a few dozen small kernels, so
+  launch latency, not arithmetic, is what a small batch pays. The largest configuration tried,
+  4,608 x 240 in float64, did not finish: L-BFGS keeps fifty history vectors of a 27 MB chain, and the
+  card ran out of its 8 GB. `docs/theory/14-the-batched-lane.md` has the table and the rule that
+  follows from it: use the batch lane always, the device only when the batch is large.
+
+### Fixed
+- **`spinoct.__version__` had drifted three releases behind the manifest**, reporting 0.16.0 while the
+  package shipped 0.18.0, because the consistency test checked the display version and the manifest but
+  not the attribute a dependant actually reads. It now checks all three.
+- **`UniaxialOptimalControl` gained `peak_amplitude()`, because the obvious way to get the peak is
+  wrong.** The pulse amplitude is `dn(u|m) + a p sn(u|m)` over `u` from 0 to `2K(m)`, and at both of
+  those ends `sn = 0` and `dn = 1`: sampling the start and the midpoint of the pulse returns the same
+  number, and for the negative parameter of a damped reversal that number is the pulse's MINIMUM. The
+  peak is at a quarter of the way through, where `sn = 1`, and the closed form for it is
+  `K / (mu p sqrt(1+a^2)) [sqrt(1 + a^2 p^2) + a p]`. Sampling the ends understates it by 0.2 per cent
+  at alpha = 0.01 and T = 1 tau0, and by 37 per cent at alpha = 0.1 and T = 20 tau0. A driver sized on
+  the old number would have been under-specified by a third. The new method is exact, not sampled, and
+  a test holds it to a 200,001-point scan of the pulse.
+
 ## [0.18.000] - 2026-09-22
 
 ### Fixed
