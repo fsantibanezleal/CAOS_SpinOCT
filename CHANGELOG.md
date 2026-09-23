@@ -33,6 +33,9 @@ display form `X.XX.XXX`; the PyPI/semver form drops the padding.
   follows from it: use the batch lane always, the device only when the batch is large.
 
 ### Fixed
+- **`spinoct.__version__` had drifted three releases behind the manifest**, reporting 0.16.0 while the
+  package shipped 0.18.0, because the consistency test checked the display version and the manifest but
+  not the attribute a dependant actually reads. It now checks all three.
 - **`UniaxialOptimalControl` gained `peak_amplitude()`, because the obvious way to get the peak is
   wrong.** The pulse amplitude is `dn(u|m) + a p sn(u|m)` over `u` from 0 to `2K(m)`, and at both of
   those ends `sn = 0` and `dn = 1`: sampling the start and the midpoint of the pulse returns the same
