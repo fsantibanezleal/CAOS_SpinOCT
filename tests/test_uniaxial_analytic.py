@@ -385,3 +385,27 @@ def test_shape_parameter_reproduces_the_period_relation() -> None:
                 * float(complete_k(-(alpha**2) * sol.p**2))
             )
             assert reconstructed == pytest.approx(switching_time, rel=1e-12)
+
+
+@pytest.mark.parametrize("alpha", [0.001, 0.01, 0.1, 0.3])
+@pytest.mark.parametrize("t_tau0", [0.5, 5.0, 50.0])
+def test_peak_amplitude_is_the_real_peak_not_the_endpoints(alpha: float, t_tau0: float) -> None:
+    """The trap this method exists for: the amplitude at the start of the pulse and at its midpoint is
+    the same number, and for the negative elliptic parameter of a damped reversal that number is the
+    pulse's MINIMUM. A driver sized on it would be under-specified by up to a third.
+
+    Checked the independent way: against a dense scan of the pulse rather than by restating the
+    closed form.
+    """
+    system = make_system(alpha)
+    switching_time = system.switching_time_from_tau0(t_tau0)
+    optimal = UniaxialOptimalControl.for_switching_time(system, switching_time)
+
+    scanned = float(np.max(np.abs(optimal.field_amplitude(np.linspace(0.0, switching_time, 200_001)))))
+    assert optimal.peak_amplitude() == pytest.approx(scanned, rel=1e-12)
+
+    ends = max(abs(float(optimal.field_amplitude(t))) for t in (0.0, switching_time / 2.0))
+    assert optimal.peak_amplitude() >= ends
+    if alpha >= 0.1 and t_tau0 >= 5.0:
+        # Where it matters, the difference is not a rounding detail.
+        assert optimal.peak_amplitude() > 1.05 * ends
