@@ -179,6 +179,30 @@
     "reason": "Dimensionless energy fraction. The default 99 percent threshold defining a pulse's spectral bandwidth. A fraction of total spectral energy, carries no physical unit.",
     "source": "fraction: float = 0.99"
   },
+  "src/spinoct/numeric/batch_ocp.py::0.0001": {
+    "reason": "Dimensionless per-problem convergence residual: the largest tangent-gradient magnitude over a chain divided by that problem's own cost, so the ratio carries no units and the test is the same at every switching time. Measured on the CPU lane's own paths (converged solves 3.7e-06 to 5.5e-05, a stalled one 2.2e-03), not chosen.",
+    "source": "_RESIDUAL_TOLERANCE = 1e-4"
+  },
+  "src/spinoct/numeric/batch_ocp.py::0.05": {
+    "reason": "Dimensionless symmetry-breaking perturbation of the initial chain, in radians of arc on the unit sphere. Same default as the single-problem solver: the pole-to-pole geodesic sits in a symmetry plane where the gradient vanishes to first order, so a nonzero value is a correctness requirement.",
+    "source": "noise: float = 0.05,"
+  },
+  "src/spinoct/numeric/batch_ocp.py::0.15": {
+    "reason": "Dimensionless symmetry-breaking perturbation in radians of arc for the multi-seed sweep, wider than the single solve so different seeds land in different basins. Same default as ImageOCPSolver.solve_best.",
+    "source": "noise: float = 0.15,"
+  },
+  "src/spinoct/numeric/batch_ocp.py::1e-12": {
+    "reason": "Dimensionless L-BFGS termination on the objective, which is the sum of per-problem costs each divided by its own starting cost and therefore of order unity. An optimizer setting.",
+    "source": "relative_tolerance: float = 1e-12,"
+  },
+  "src/spinoct/numeric/batch_ocp.py::1e-14": {
+    "reason": "Dimensionless L-BFGS gradient tolerance, set below the objective tolerance so termination is decided by the relative cost change rather than by a gradient magnitude, which would carry units. An optimizer setting.",
+    "source": "tolerance_grad=1e-14,"
+  },
+  "src/spinoct/numeric/batch_ocp.py::1e-30": {
+    "reason": "Dimensionless floor on the length of the chord between two neighbouring unit vectors, guarding the normalization and its derivative when two images coincide. The geodesic angle is zero there, so the velocity is zero whatever direction is chosen. A numerical guard on a unit-vector difference, not a physical quantity.",
+    "source": "_TINY_CHORD = 1e-30"
+  },
   "src/spinoct/numeric/image_ocp.py::0.05": {
     "reason": "Angle in radians (dimensionless). The default symmetry-breaking perturbation of the initial chain for a single solve. Radians are dimensionless and this is a small arc-length nudge, not a physical observable.",
     "source": "noise: float = 0.05,"
