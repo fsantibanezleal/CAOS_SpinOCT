@@ -273,17 +273,18 @@ class BatchImageOCPSolver:
         same problem from the same start as ``ImageOCPSolver.solve(seed=...)`` and the two lanes can be
         compared path by path rather than only in distribution.
         """
+        # Every problem in the batch draws from a generator seeded the same way, so each row starts
+        # from the same perturbed chain a single solve at this seed would have started from. That is
+        # what lets a batch of one be compared with ImageOCPSolver path by path.
         chains = []
-        for index in range(self.batch_size):
+        for _ in range(self.batch_size):
             rng = np.random.default_rng(seed)
             chain = _geodesic_interpolate(
                 np.array([0.0, 0.0, 1.0]), np.array([0.0, 0.0, -1.0]), self.n_images + 2
             )
             if noise > 0.0:
-                perturbation = rng.normal(scale=noise, size=(self.n_images, 3))
-                chain[1:-1] = _normalize(chain[1:-1] + perturbation)
+                chain[1:-1] = _normalize(chain[1:-1] + rng.normal(scale=noise, size=(self.n_images, 3)))
             chains.append(chain[1:-1])
-            del index
         return np.stack(chains)
 
     def solve(

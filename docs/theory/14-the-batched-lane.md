@@ -16,8 +16,14 @@ and embarrassingly parallel. That is the shape this lane is for.
 
 ## The same functional, term for term
 
-The physics is the discretization of
-`docs/theory/05-numerical-optimal-control-path.md`, unchanged:
+The functional and its discretization are those of Badarneh, Kwiatkowski and Bessarab, Phys. Rev. B
+107, 214448 (2023), https://doi.org/10.1103/PhysRevB.107.214448, exactly as in
+`docs/theory/05-numerical-optimal-control-path.md`; this lane changes how it is evaluated, not what is
+evaluated. The acceptance gate is the closed-form uniaxial solution of Kwiatkowski, Badarneh, Berkov
+and Bessarab, Phys. Rev. Lett. 126, 177206 (2021),
+https://doi.org/10.1103/PhysRevLett.126.177206.
+
+The physics is unchanged:
 
 ```
 s_{p+1/2}     = (s_{p+1} + s_p) / |s_{p+1} + s_p|
