@@ -4,6 +4,17 @@ All notable changes to `spinoct` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), newest on top. Versions use the padded
 display form `X.XX.XXX`; the PyPI/semver form drops the padding.
 
+## [0.19.001] - 2026-09-23
+
+### Fixed
+- **The explanation in `peak_amplitude()`'s docstring was wrong; the value it returns was not.** It said
+  the pulse runs over `u` from 0 to `2K(m)` and that the start and the midpoint of the pulse are its
+  minimum. Over the pulse `u` runs from 0 to `4K(m)`; the start, the midpoint and the end share one
+  middle value; the amplitude peaks at a quarter of the way through and dips at three quarters, which is
+  what `peak_times()` already said. The shortcut the method replaces reported the middle value, up to 27
+  per cent below the peak (the peak up to 37 per cent above it), not "37 per cent low". A new test pins
+  where the extrema are on the pulse itself. The 0.19.000 entry below is corrected to match.
+
 ## [0.19.000] - 2026-09-22
 
 ### Added
@@ -37,13 +48,14 @@ display form `X.XX.XXX`; the PyPI/semver form drops the padding.
   package shipped 0.18.0, because the consistency test checked the display version and the manifest but
   not the attribute a dependant actually reads. It now checks all three.
 - **`UniaxialOptimalControl` gained `peak_amplitude()`, because the obvious way to get the peak is
-  wrong.** The pulse amplitude is `dn(u|m) + a p sn(u|m)` over `u` from 0 to `2K(m)`, and at both of
-  those ends `sn = 0` and `dn = 1`: sampling the start and the midpoint of the pulse returns the same
-  number, and for the negative parameter of a damped reversal that number is the pulse's MINIMUM. The
-  peak is at a quarter of the way through, where `sn = 1`, and the closed form for it is
-  `K / (mu p sqrt(1+a^2)) [sqrt(1 + a^2 p^2) + a p]`. Sampling the ends understates it by 0.2 per cent
-  at alpha = 0.01 and T = 1 tau0, and by 37 per cent at alpha = 0.1 and T = 20 tau0. A driver sized on
-  the old number would have been under-specified by a third. The new method is exact, not sampled, and
+  wrong.** The pulse amplitude is `dn(u|m) + a p sn(u|m)` over `u` from 0 to `4K(m)`, and at the start,
+  the midpoint and the end `sn = 0` and `dn = 1`: sampling the start and the midpoint of the pulse
+  returns one middle value, below the peak at a quarter of the way through, where `sn = 1`, and above the
+  dip at three quarters. The closed form for the peak is
+  `K / (mu p sqrt(1+a^2)) [sqrt(1 + a^2 p^2) + a p]`. Sampling the start and the midpoint reports 0.2
+  per cent too little at alpha = 0.01 and T = 1 tau0, and 27 per cent too little at alpha = 0.1 and
+  T = 20 tau0, where the true peak is 37 per cent higher. (Corrected in 0.19.001: this entry first said
+  `u` ran to `2K(m)`, called the middle value the minimum, and gave 37 per cent as the shortfall.) The new method is exact, not sampled, and
   a test holds it to a 200,001-point scan of the pulse.
 
 ## [0.18.000] - 2026-09-22
