@@ -431,13 +431,15 @@ class UniaxialOptimalControl:
 
             b(u) = K / (mu p sqrt(1+a^2)) * [dn(u|m) + a p sn(u|m)],   m = -a^2 p^2 < 0,
 
-        and the pulse runs over ``u`` from 0 to ``2K(m)``. At both of those ends ``sn = 0`` and
-        ``dn = 1``, so sampling the start and the midpoint of the pulse returns the same value, and for
-        a negative parameter that value is the pulse's MINIMUM: ``dn^2 = 1 - m sn^2 >= 1`` here, so both
-        terms grow together and the amplitude is largest at ``u = K(m)``, a quarter of the way through,
-        where ``sn = 1`` and ``dn = sqrt(1 - m) = sqrt(1 + a^2 p^2)``. Evaluating only the ends
-        understates the peak by up to 37 per cent at ``alpha = 0.1`` and ``T = 20 tau0``, and the gap
-        grows with damping and with the switching time.
+        and over the pulse ``u`` runs from 0 to ``4K(m)`` (the polar angle is half the Jacobi
+        amplitude, which reaches ``2 pi`` there). At the start, the midpoint and the end ``sn = 0`` and
+        ``dn = 1``, so those three points share one middle value, which is neither extremum. For a
+        negative parameter ``dn^2 = 1 - m sn^2 >= 1``, so the amplitude is largest where ``sn = 1``, at
+        ``u = K(m)``, a quarter of the way through, with ``dn = sqrt(1 - m) = sqrt(1 + a^2 p^2)``, and
+        smallest where ``sn = -1``, at three quarters (see :meth:`peak_times`). Sampling the start and
+        the midpoint, the obvious shortcut, reports that middle value: up to 27 per cent below the peak
+        at ``alpha = 0.1`` and ``T = 20 tau0`` (the peak is 37 per cent above it), and the gap grows with
+        damping and with the switching time.
 
         Returns:
             ``K / (mu p sqrt(1+a^2)) * [sqrt(1 + a^2 p^2) + a p]``, in T. Agrees with a 200,001-point
