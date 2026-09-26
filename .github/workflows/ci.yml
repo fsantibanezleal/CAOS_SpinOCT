@@ -27,6 +27,8 @@ jobs:
       - run: python -m pytest tests -q
       - name: CI budget, trunk-only triggers, no training (ADR-0074)
         run: python scripts/check_ci_budget.py
+      - name: No em-dash and no emoji in tracked content (ADR-0067)
+        run: python scripts/check_content_standards.py
   wheel-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 30
